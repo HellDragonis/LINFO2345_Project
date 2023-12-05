@@ -39,36 +39,21 @@ read_transactions(FilePath) ->
 create_block(Address, Transactions) ->
     Block = #block{
         block_number = get_next_block_number(),
-        merkle_tree_root = calculate_merkle_tree_root(Transactions),
         builder_address = Address,
-        last_block_hash = get_last_block_hash(),
         transactions = Transactions
     },
-    broadcast_block(Address, Block).
 
-% Function to broadcast a block to all nodes
-broadcast_block(Address, Block) ->
-    Nodes = get_all_nodes(),
-    lists:foreach(fun(Node) -> node:sends_messages(Node, {block, Block}) end, Nodes).
+
 
 % Placeholder functions for future implementation
 get_next_block_number() ->
     % Implement logic to get the next block number
 
-
-calculate_merkle_tree_root(Transactions) ->
-    % Implement Merkle tree calculation logic
-
-
-get_last_block_hash() ->
-    % Implement logic to get the hash of the last published block
     
 
 
 -record(block, {
     block_number,
-    merkle_tree_root,
     builder_address,
-    last_block_hash,
     transactions
 }).

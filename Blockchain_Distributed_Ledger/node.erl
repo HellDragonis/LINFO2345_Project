@@ -1,5 +1,5 @@
 -module(node).
--export([start/1, sends_messages/3, sends_messages/2]).
+-export([start/1, sends_messages/3]).
 
 % Function to start a new node with a given address and register it
 start(Address) ->
