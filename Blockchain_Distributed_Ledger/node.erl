@@ -29,10 +29,14 @@ handle_message(Address, From, Message) ->
 
 % Function to send a message to another node
 sends_messages(To, Message) ->
+    ToName = case erlang:process_info(To, registered_name) of
+        {registered_name, RegisteredName} -> RegisteredName;
+        _ -> atom_to_list(To)  % If not registered, assume it's already a name
+    end,
     To ! {self(), Message},
     % Acknowledgement to be sure that the message has been sent
     receive
         {To, _} -> ok
     after 5000 ->
-        io:format("Timeout sending message to ~p~n", [To])
+        io:format("Timeout sending message to ~s~n", [ToName])
     end.
