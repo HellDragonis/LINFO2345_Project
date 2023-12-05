@@ -2,21 +2,37 @@
 % Implement a broadcast step to disseminate a block to all other nodes.
 -module(builder).
 -export([start/1, create_block/1, broadcast_block/2]).
+-include("csv_reader.erl").
 
 % Function to start a new builder with a given address
 start(Address) ->
-    Pid = spawn(fun() -> node_builder(Address) end),
+    Pid = spawn(fun() -> builder_loop(Address) end),
     register(Address, Pid),
     Pid.
 
 % Builder main loop
 builder_loop(Address) ->
-    ValidTransactions = read_transactions("valid_transactions.csv"),
-    create_block(Address, ValidTransactions),
-    builder_loop(Address).
+    builder_loop(Address, []).
+
+builder_loop(Address, ProcessedTransactions) ->
+    % Read all transactions from the CSV file
+    AllTransactions = read_transactions("transactions.csv"),
+    % Exclude transactions that have already been processed
+    ValidTransactions = lists:subtract(AllTransactions, ProcessedTransactions),
+    % Take the first 10 transactions
+    TransactionsForBlock = lists:sublist(ValidTransactions, 1, 10),
+    
+    create_block(Address, TransactionsForBlock),
+    % Update the list of processed transactions
+    NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
+    
+    % Continue the loop with the updated processed transactions
+    builder_loop(Address, NewProcessedTransactions).
+
 
 read_transactions(FilePath) ->
-    % Implement logic to read transactions from CSV file
+    Data = csv_reader:read_csv_file(FilePath),
+    Data.
 
 
 % Function to create a new block and broadcast it
