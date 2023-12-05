@@ -1,5 +1,5 @@
 -module(node).
--export([start/1, sends_messages/2]).
+-export([start/1, sends_messages/3, sends_messages/2]).
 
 % Function to start a new node with a given address and register it
 start(Address) ->
@@ -23,20 +23,14 @@ node_loop(Address) ->
 
 % Handling incoming messages, to make the transaction
 handle_message(Address, From, Message) ->
+    FromName = case erlang:process_info(From, registered_name) of
+        {registered_name, RegisteredName} -> RegisteredName;
+        _ -> atom_to_list(From)  % If not registered, assume it's already a name
+    end,
     % Implement the transaction asked here, and send an acknowledgement (TODO)
-    io:format("Node ~s received message from ~p: ~p~n", [Address, From, Message]).
+    io:format("Node ~p received message from ~s: ~w~n", [Address, FromName, Message]).
 
 
 % Function to send a message to another node
-sends_messages(To, Message) ->
-    ToName = case erlang:process_info(To, registered_name) of
-        {registered_name, RegisteredName} -> RegisteredName;
-        _ -> atom_to_list(To)  % If not registered, assume it's already a name
-    end,
-    To ! {self(), Message},
-    % Acknowledgement to be sure that the message has been sent
-    receive
-        {To, _} -> ok
-    after 5000 ->
-        io:format("Timeout sending message to ~s~n", [ToName])
-    end.
+sends_messages(From, To, Message) ->
+    To ! {From, Message}.
