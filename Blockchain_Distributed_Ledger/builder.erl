@@ -3,7 +3,6 @@
 -module(builder).
 -export([start/1, create_block/2, broadcast_block/2]).
 
-
 -record(block, {
     block_number,
     merkle_tree_root,
