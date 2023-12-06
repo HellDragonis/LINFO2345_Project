@@ -1,7 +1,7 @@
 % Implement a builder that can create blocks from a pending transaction CSV.
 % Implement a broadcast step to disseminate a block to all other nodes.
 -module(builder).
--export([start/1, create_block/2, broadcast_block/2]).
+-export([start/1, create_block/3, broadcast_block/2]).
 
 -record(block, {
     block_number,
@@ -13,17 +13,25 @@
 
 % Function to start a new builder with a given address
 start(Address) ->
+    Block = #block{
+        block_number = 0,
+        merkle_tree_root = "Root",
+        builder_address = "Builder_0",
+        last_block_hash = null,
+        transactions = []
+    },
     AtomAddress = list_to_atom(Address),
-    Pid = spawn(fun() -> builder_loop(Address) end),
-    register(AtomAddress, Pid),
     block_counter:start(),
+    hash_counter:start(),
+    Pid = spawn(fun() -> builder_loop(Address, Block) end),
+    register(AtomAddress, Pid),
     Pid.
 
 % Builder main loop
-builder_loop(Address) ->
-    builder_loop(Address, []).
+builder_loop(Address, Block) ->
+    builder_loop(Address, Block, []).
 
-builder_loop(Address, ProcessedTransactions) ->
+builder_loop(Address, Block, ProcessedTransactions) ->
     % Read all transactions from the CSV file
     AllTransactions = read_transactions("transactions.csv"),
     
@@ -36,12 +44,12 @@ builder_loop(Address, ProcessedTransactions) ->
             % Take the first 10 transactions
             TransactionsForBlock = take_first_n(ValidTransactions, 10),
             io:format("~p~n", [TransactionsForBlock]),
-            create_block(Address, TransactionsForBlock),
+            NewBlock = create_block(Address, TransactionsForBlock, Block),
             % Update the list of processed transactions
             NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
             io:format("End loop ~n"),
             % Continue the loop with the updated processed transactions
-            builder_loop(Address, NewProcessedTransactions)
+            builder_loop(Address, NewProcessedTransactions, NewBlock)
     end.
 
 read_transactions(FilePath) ->
@@ -50,11 +58,14 @@ read_transactions(FilePath) ->
 
 
 % Function to create a new block and broadcast it
-create_block(Address, Transactions) ->
-    BlockNumber = block_counter:get_next_block_number(),
-    MerkleRoot = calculate_merkle_tree_root(Transactions),
-    LastBlockHash = get_last_block_hash(),
-    Block = #block{
+create_block(Address, Transactions, Block) ->
+    io:format("Create Block with the transactions : ~n ~p~n", [Transactions]),
+    BlockNumber =  Block#block.block_number + 1,
+    io:format("Block Number : ~n ~p~n", [BlockNumber]),
+    MerkleRoot =  1,%merkle_tree:root_hash(Transactions),
+    LastBlockHash = 2, %hash_counter:get_last_block_hash(),
+    io:format("Last Block Hash: ~p~n", [LastBlockHash]),
+    NewBlock = #block{
         block_number = BlockNumber,
         merkle_tree_root = MerkleRoot,
         builder_address = Address,
@@ -63,7 +74,8 @@ create_block(Address, Transactions) ->
     },
     
     BlockData = {BlockNumber, MerkleRoot, Address, LastBlockHash, Transactions},
-    writer_csv:receive_block_data(BlockData).
+    %writer_csv:receive_block_data(BlockData), 
+    NewBlock.
 
 
 
@@ -73,15 +85,6 @@ broadcast_block(Address, Block) ->
     %Nodes = get_all_nodes(),
     %lists:foreach(fun(Node) -> node:sends_messages(Node, {block, Block}) end, Nodes).
 
-
-calculate_merkle_tree_root(Transactions) ->
-    1.
-    % Implement Merkle tree calculation logic
-    
-    
-get_last_block_hash() ->
-    2.
-    % Implement logic to get the hash of the last published block    
 
 
 % Helper functions

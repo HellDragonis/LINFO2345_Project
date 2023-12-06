@@ -1,6 +1,6 @@
 % test_node.erl
 -module(test).
--export([run_node/0]).
+-export([run_node/0, run_csv_reader/0, run_builder/0]).
 
 run_node() ->
     Node1 = node:start("Builder_1"),
