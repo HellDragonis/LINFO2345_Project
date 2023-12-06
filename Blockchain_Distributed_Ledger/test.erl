@@ -1,8 +1,8 @@
 % test_node.erl
--module(test_node).
--export([run/0]).
+-module(test).
+-export([run_node/0]).
 
-run() ->
+run_node() ->
     Node1 = node:start("Builder_1"),
     Node2 = node:start("Builder_2"),
 
@@ -13,3 +13,9 @@ run() ->
     timer:sleep(1000),
     Node1 ! stop,
     Node2 ! stop.
+
+run_csv_reader() ->
+    csv_reader:read_csv_file("transactions.csv").
+
+run_builder() ->
+    builder:start("Builder_1").
