@@ -18,9 +18,11 @@ write_block_data(File, [BlockData | RestBlocks]) ->
 
 receive_block_data(BlockData) ->
     {BlockNumber, MerkleRoot, NodeAddress, LastBlockHash, TransactionIDs} = BlockData,
+    % Convert TransactionIDs list to a comma-separated string
+    TransactionIDsStr = string:join([integer_to_list(ID) || ID <- TransactionIDs], ","),
     FileName = "blocks_data.csv",
     {ok, File} = file:open(FileName, [append]),
-    Line = io_lib:format("~w,~s,~s,~s,~s~n", [BlockNumber, MerkleRoot, NodeAddress, LastBlockHash, TransactionIDs]),
+    Line = io_lib:format("~w,~w,~s,~w,~s~n", [BlockNumber, MerkleRoot, NodeAddress, LastBlockHash, TransactionIDsStr]),
     file:write(File, Line),
     file:close(File).
 

@@ -21,8 +21,6 @@ start(Address) ->
         transactions = []
     },
     AtomAddress = list_to_atom(Address),
-    block_counter:start(),
-    hash_counter:start(),
     Pid = spawn(fun() -> builder_loop(Address, Block) end),
     register(AtomAddress, Pid),
     Pid.
@@ -49,7 +47,7 @@ builder_loop(Address, Block, ProcessedTransactions) ->
             NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
             io:format("End loop ~n"),
             % Continue the loop with the updated processed transactions
-            builder_loop(Address, NewProcessedTransactions, NewBlock)
+            builder_loop(Address, NewBlock, NewProcessedTransactions)
     end.
 
 read_transactions(FilePath) ->
@@ -65,6 +63,7 @@ create_block(Address, Transactions, Block) ->
     MerkleRoot =  1,%merkle_tree:root_hash(Transactions),
     LastBlockHash = 2, %hash_counter:get_last_block_hash(),
     io:format("Last Block Hash: ~p~n", [LastBlockHash]),
+    TransactionIDs = [1,2,3,4,5,6,7,8,9,10],
     NewBlock = #block{
         block_number = BlockNumber,
         merkle_tree_root = MerkleRoot,
@@ -73,8 +72,8 @@ create_block(Address, Transactions, Block) ->
         transactions = Transactions
     },
     
-    BlockData = {BlockNumber, MerkleRoot, Address, LastBlockHash, Transactions},
-    %writer_csv:receive_block_data(BlockData), 
+    BlockData = {BlockNumber, MerkleRoot, Address, LastBlockHash, TransactionIDs},
+    writer_csv:receive_block_data(BlockData), 
     NewBlock.
 
 
