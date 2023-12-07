@@ -16,8 +16,8 @@ start(Address) ->
     Block = #block{
         block_number = 0,
         merkle_tree_root = "Root",
-        builder_address = "Builder_0",
-        last_block_hash = null,
+        builder_address = Address,
+        last_block_hash = 0,
         transactions = []
     },
     AtomAddress = list_to_atom(Address),
@@ -57,12 +57,14 @@ read_transactions(FilePath) ->
 
 % Function to create a new block and broadcast it
 create_block(Address, Transactions, Block) ->
-    io:format("Create Block with the transactions : ~n ~p~n", [Transactions]),
     BlockNumber =  Block#block.block_number + 1,
-    io:format("Block Number : ~n ~p~n", [BlockNumber]),
-    MerkleRoot =  1,%merkle_tree:root_hash(Transactions),
-    LastBlockHash = 2, %hash_counter:get_last_block_hash(),
-    io:format("Last Block Hash: ~p~n", [LastBlockHash]),
+    MerkleRoot = merkle_tree:root_hash(Transactions),
+    io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
+    if 
+        BlockNumber == 1 -> LastBlockHash = 0;
+        BlockNumber > 1 -> LastBlockHash = Block#block.last_block_hash 
+    end,
+
     TransactionIDs = [1,2,3,4,5,6,7,8,9,10],
     NewBlock = #block{
         block_number = BlockNumber,

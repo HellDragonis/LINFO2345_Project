@@ -8,16 +8,15 @@ build_tree(Transactions) ->
         % If the Transaction List is empty
         0 -> <<>>;
         % If there is only one element in the Transaction List
-        1 -> hd(Transactions);
+        1 -> 
+            crypto:hash(sha256, list_to_binary(hd(Transactions)));
         % If there more than one element in the Transaction List
         Len ->
             {Left, Right} = lists:split(Len div 2, Transactions),
             LeftHash = build_tree(Left),
             RightHash = build_tree(Right),
-            io:format("LeftHash : ~n ~p~n", [LeftHash]),
-            io:format("RightHash : ~n ~p~n", [RightHash]),
             % Concatenate and hash the children nodes
-            crypto:hash(sha256, <<LeftHash/binary, RightHash/binary>>)
+            crypto:hash(sha256, <<LeftHash/binary, RightHash/binary>>),
     end.
 
 % Function to calculate the root hash of a Merkle tree

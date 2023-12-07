@@ -1,4 +1,4 @@
--module(node).
+-module(my_node).
 -export([start/1, sends_messages/3]).
 
 % Function to start a new node with a given address and register it
@@ -19,6 +19,8 @@ node_loop(Address) ->
         stop ->
             io:format("~s stopped.~n", [Address])
     end.
+
+
 
 
 % Handling incoming messages, to make the transaction
