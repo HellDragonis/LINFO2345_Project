@@ -18,4 +18,4 @@ run_csv_reader() ->
     csv_reader:read_csv_file("transactions.csv").
 
 run_builder() ->
-    builder:start("Builder_1").
+    builder:start("Builder_1", 4, 5).

@@ -16,7 +16,7 @@ build_tree(Transactions) ->
             LeftHash = build_tree(Left),
             RightHash = build_tree(Right),
             % Concatenate and hash the children nodes
-            crypto:hash(sha256, <<LeftHash/binary, RightHash/binary>>),
+            crypto:hash(sha256, <<LeftHash/binary, RightHash/binary>>)
     end.
 
 % Function to calculate the root hash of a Merkle tree

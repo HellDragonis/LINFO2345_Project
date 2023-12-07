@@ -1,4 +1,5 @@
-erlc ./node.erl
+erlc ./my_node.erl
+erlc ./create_node.erl
 erlc ./merkle_tree.erl
 erlc ./csv_reader.erl
 erlc ./writer_csv.erl

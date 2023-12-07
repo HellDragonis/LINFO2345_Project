@@ -63,12 +63,20 @@ create_block(Address, Transactions, Block) ->
     BlockNumber =  Block#block.block_number + 1,
     MerkleRoot = merkle_tree:root_hash(Transactions),
     io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
-    if 
-        BlockNumber == 1 -> LastBlockHash = 0;
-        BlockNumber > 1 -> LastBlockHash = Block#block.last_block_hash 
+    LastBlockHash = case BlockNumber of
+        1 -> 0;
+        _ -> crypto:hash(sha256, term_to_binary(Block))
+        
     end,
-
-    TransactionIDs = [1,2,3,4,5,6,7,8,9,10],
+    case LastBlockHash of 
+        0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
+        _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
+    end, 
+    TransactionIDs = case BlockNumber of
+    1 -> lists:seq(2, 11);
+    _ -> lists:seq((BlockNumber - 1) * 10 + 2, (BlockNumber * 10) + 1)
+    end,
+    io:format("Transaction Ids : ~n ~w~n", [TransactionIDs]),
     NewBlock = #block{
         block_number = BlockNumber,
         merkle_tree_root = MerkleRoot,
