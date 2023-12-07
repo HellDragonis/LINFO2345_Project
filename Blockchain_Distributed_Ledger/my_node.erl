@@ -28,9 +28,9 @@ handle_message(Address, From, Message) ->
     FromName = case erlang:process_info(From, registered_name) of
         {registered_name, RegisteredName} -> RegisteredName;
         _ -> atom_to_list(From)  % If not registered, assume it's already a name
-    end,
+    end.
     % Implement the transaction asked here, and send an acknowledgement (TODO)
-    io:format("Node ~p received message from ~s: ~w~n", [Address, FromName, Message]).
+    %io:format("Node ~p received message from ~s: ~w~n", [Address, FromName, Message]).
 
 
 % Function to send a message to another node

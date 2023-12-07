@@ -1,7 +1,7 @@
 % Implement a builder that can create blocks from a pending transaction CSV.
 % Implement a broadcast step to disseminate a block to all other nodes.
 -module(builder).
--export([start/3, create_block/3, broadcast_block/2]).
+-export([start/3, create_block/5, broadcast_block/3]).
 
 -record(block, {
     block_number,
@@ -21,18 +21,18 @@ start(Address,  NumValidators, NumNonValidators) ->
         transactions = []
     },
     AtomAddress = list_to_atom(Address),
-    Pid = spawn(fun() -> builder_loop(Address, Block) end),
-    register(AtomAddress, Pid),
     {ListValidators, ListNonValidators, ListBuilders} = create_node:create_nodes(NumValidators, NumNonValidators),
+    Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
+    register(AtomAddress, Pid),
     UpdatedBuilders = create_node:update_builder_pid(Pid, ListBuilders),
     create_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders),
     Pid.
 
 % Builder main loop
-builder_loop(Address, Block) ->
-    builder_loop(Address, Block, []).
+builder_loop(Address, Block, ListValidators,ListNonValidators) ->
+    builder_loop(Address, Block, [], ListValidators,ListNonValidators).
 
-builder_loop(Address, Block, ProcessedTransactions) ->
+builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidators) ->
     % Read all transactions from the CSV file
     AllTransactions = read_transactions("transactions.csv"),
     
@@ -44,13 +44,13 @@ builder_loop(Address, Block, ProcessedTransactions) ->
             io:format("Start loop ~n"),
             % Take the first 10 transactions
             TransactionsForBlock = take_first_n(ValidTransactions, 10),
-            io:format("~p~n", [TransactionsForBlock]),
-            NewBlock = create_block(Address, TransactionsForBlock, Block),
+            %io:format("~p~n", [TransactionsForBlock]),
+            NewBlock = create_block(Address, TransactionsForBlock, Block,ListValidators,ListNonValidators),
             % Update the list of processed transactions
             NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
             io:format("End loop ~n"),
             % Continue the loop with the updated processed transactions
-            builder_loop(Address, NewBlock, NewProcessedTransactions)
+            builder_loop(Address, NewBlock, NewProcessedTransactions,ListValidators,ListNonValidators)
     end.
 
 read_transactions(FilePath) ->
@@ -59,7 +59,7 @@ read_transactions(FilePath) ->
 
 
 % Function to create a new block and broadcast it
-create_block(Address, Transactions, Block) ->
+create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
     BlockNumber =  Block#block.block_number + 1,
     MerkleRoot = merkle_tree:root_hash(Transactions),
     io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
@@ -87,15 +87,21 @@ create_block(Address, Transactions, Block) ->
     
     BlockData = {BlockNumber, MerkleRoot, Address, LastBlockHash, TransactionIDs},
     writer_csv:receive_block_data(BlockData), 
+    broadcast_block(ListValidators, ListNonValidators,NewBlock ),
     NewBlock.
 
 
 
 % Function to broadcast a block to all nodes
-broadcast_block(Address, Block) ->
-    ok.
-    %Nodes = get_all_nodes(),
-    %lists:foreach(fun(Node) -> node:sends_messages(Node, {block, Block}) end, Nodes).
+broadcast_block(ListValidators, ListNonValidators, NewBlock) ->
+    ReceiverPids = ListValidators ++ ListNonValidators,
+    lists:foreach(
+        fun(NodePid) ->
+            io:format("Process ~p has sent the following message  to ~p~n", [self(), NodePid]),
+            my_node:sends_messages(self(), NodePid, {block, NewBlock})
+        end,
+        ReceiverPids
+    ).
 
 
 
