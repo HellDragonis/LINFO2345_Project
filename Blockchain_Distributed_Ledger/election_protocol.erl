@@ -1,0 +1,115 @@
+-module(election_protocol).
+-export([init/2, start_election/1, receive_shuffled_list/1, select_proposers/1, broadcast_new_proposers/1]).
+
+% Initialization function, called at the bootstrapping
+init(ValidatorList, BuilderNode) ->
+    % Store the initial list of validators and current proposer group head
+    Top10Percent = select_top_10_percent(ValidatorList),
+    State = #{validators => ValidatorList, proposer_group_head => Top10Percent, builder => BuilderNode},
+
+    % Save the initial state to a file for logging purposes
+    file:write_file("election_log.txt", io_lib:format("~p.~n", [State])),
+    State.
+
+% Function to initiate a new election
+start_election(State) ->
+    % Get the first node in the lists of Proposer Group
+    ProposerGroupHead = maps:get(proposer_group_head, State),
+    FirstNode = hd(ProposerGroupHead),
+
+    % Get the Builder Node to send the broadcast
+    BuilderNode = maps:get(builder, State),
+
+    % Broadcast the beginning of the election to stop block creation
+    broadcast_begin_election(FirstNode, BuilderNode).
+
+
+% Function to receive the shuffled list from the previous validator
+receive_shuffled_list(ShuffledList) ->
+    % Implement the logic to receive the shuffled list from the previous validator.
+    % This function will be called for each validator in the network.
+
+% Function to reshuffle the list and send it to the next validator
+reshuffle_and_send(List) ->
+    ShuffledList = shuffle_list(List),
+    send_to_next_validator(ShuffledList).
+
+% Function to simulate sending the shuffled list to the next validator
+send_to_next_validator(ShuffledList, CurrentValidator) ->
+    NextValidatorNumber = get_next_validator_number(CurrentValidator),
+    NextValidator = list_to_atom("Validator_" ++ integer_to_list(NextValidatorNumber)),
+    % Implement the logic to send the shuffled list to the next validator (for example, using message passing)
+    io:format("Sending shuffled list to ~p~n", [NextValidator]),
+    NextValidator ! {shuffled_list, ShuffledList}.
+
+
+% Function to select the proposers and update the state
+select_proposers(State) ->
+    AllValidators = maps:get(validators, State),
+    ShuffledList = reshuffle_and_send(AllValidators),
+    ProposerGroup = select_top_10_percent(ShuffledList),
+    NewProposerGroupHead = lists:first(ProposerGroup),
+    NewState = State#{proposer_group_head => NewProposerGroupHead},
+    % Log the election details to the file
+    file:write_file("election_log.txt", io_lib:format("~p.~n", [NewState])),
+    NewState.
+
+
+% ---Broadcast function---
+
+% Function to simulate broadcasting the beginning of an election
+broadcast_begin_election(ProposerGroupHead, BuilderNode) ->
+    % Implement the logic to broadcast the message to stop block creation.
+    % This may involve sending a message to the first node in the current proposer group.
+
+% Function to broadcast the new proposer group to all nodes
+broadcast_new_proposers(NewProposerGroup) ->
+    % Implement the logic to broadcast the new proposer group to all nodes.
+    % This may involve sending a message to each node in the network.
+
+% Function to simulate broadcasting the beginning of a new epoch
+broadcast_new_epoch(NewProposerGroupHead) ->
+    % Implement the logic to broadcast the new epoch message.
+    % This may involve sending a message to the first node in the new proposer group.
+
+
+% ---Utility functions---
+
+% Function to shuffle a list
+shuffle_list(List) ->
+    %% Determine the log n portion then randomize the list.
+    randomize(round(math:log(length(List)) + 0.5), List).
+
+randomize(1, List) ->
+    randomize(List);
+randomize(N, List) ->
+    lists:foldl(fun(_E, Acc) ->
+			randomize(Acc)
+		end, randomize(List), lists:seq(1, (N - 1))).
+
+randomize(List) ->
+    Shuffle1 = lists:map(fun(Elem) -> 
+			  {rand:uniform(), Elem}
+		  end, List),
+
+    {_, Shuffle2} = lists:unzip(lists:keysort(1, Shuffle1)),
+    Shuffle2.
+
+% Function to select the top 10% of the shuffled list
+select_top_10_percent(ShuffledList) ->
+    Length = length(ShuffledList),
+    TenPercent = trunc(Length * 0.1),
+    MinCount = max(TenPercent, 1),
+    lists:sublist(ShuffledList, 1, MinCount).
+
+
+% Function to get the number of the next validator
+get_next_validator_number(CurrentValidator) ->
+    {_, Number} = lists:keyfind(CurrentValidator, 1, validator_numbers()),
+    NextNumber = (Number mod number_of_validators()) + 1,
+    NextNumber.
+
+% Function to get the total number of validators
+number_of_validators() ->
+    length(validator_numbers()).
+
