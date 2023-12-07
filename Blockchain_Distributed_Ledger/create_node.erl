@@ -1,5 +1,6 @@
 -module(create_node).
--export([create_nodes/2, display_lists/2]).
+-export([create_nodes/2, display_lists/3, add_builder/2, update_builder_pid/2]).
+
 
 create_nodes(NumValidators, NumNonValidators) ->
     {ListValidators, ListBuilders} = create_validators(NumValidators, []),
@@ -20,6 +21,13 @@ create_non_validators(NumNonValidators, NonValidators) ->
     Pid = my_node:start(NodeName),
     create_non_validators(NumNonValidators - 1, [Pid | NonValidators]).
 
-display_lists(ListValidators, ListNonValidators) ->
+add_builder(BuilderPid, ListBuilders) ->
+    [BuilderPid | ListBuilders].
+
+update_builder_pid(Pid, ListBuilders) ->
+    create_node:add_builder(Pid, ListBuilders).
+
+display_lists(ListValidators, ListNonValidators, ListBuilders) ->
     io:format("Validators nodes: ~p~n", [ListValidators]),
-    io:format("Non-validators nodes: ~p~n", [ListNonValidators]).
+    io:format("Non-validators nodes: ~p~n", [ListNonValidators]),
+    io:format("Builder nodes: ~p~n", [ListBuilders]).

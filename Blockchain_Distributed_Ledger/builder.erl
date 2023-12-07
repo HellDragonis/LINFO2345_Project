@@ -1,7 +1,7 @@
 % Implement a builder that can create blocks from a pending transaction CSV.
 % Implement a broadcast step to disseminate a block to all other nodes.
 -module(builder).
--export([start/1, create_block/3, broadcast_block/2]).
+-export([start/3, create_block/3, broadcast_block/2]).
 
 -record(block, {
     block_number,
@@ -12,7 +12,7 @@
 }).
 
 % Function to start a new builder with a given address
-start(Address) ->
+start(Address,  NumValidators, NumNonValidators) ->
     Block = #block{
         block_number = 0,
         merkle_tree_root = "Root",
@@ -23,6 +23,9 @@ start(Address) ->
     AtomAddress = list_to_atom(Address),
     Pid = spawn(fun() -> builder_loop(Address, Block) end),
     register(AtomAddress, Pid),
+    {ListValidators, ListNonValidators, ListBuilders} = create_node:create_nodes(NumValidators, NumNonValidators),
+    UpdatedBuilders = create_node:update_builder_pid(Pid, ListBuilders),
+    create_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders),
     Pid.
 
 % Builder main loop
