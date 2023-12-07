@@ -34,7 +34,7 @@ builder_loop(Address, Block, ListValidators,ListNonValidators) ->
 
 builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidators) ->
     % Read all transactions from the CSV file
-    AllTransactions = read_transactions("transactions.csv"),
+    AllTransactions = read_transactions("test_transactions.csv"),
     
     case lists:subtract(AllTransactions, ProcessedTransactions) of
         [] ->
@@ -99,8 +99,8 @@ broadcast_block(ListValidators, ListNonValidators, NewBlock) ->
     ReceiverPids = ListValidators ++ ListNonValidators,
     lists:foreach(
         fun(NodePid) ->
-            io:format("Process ~p has sent the following message  to ~p~n", [self(), NodePid]),
-            my_node:sends_messages(self(), NodePid, {block, NewBlock})
+            io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {NewBlock},NodePid]),
+            my_node:sends_messages(self(), NodePid, {NewBlock})
         end,
         ReceiverPids
     ).
