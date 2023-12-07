@@ -72,9 +72,11 @@ create_block(Address, Transactions, Block) ->
         0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
         _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
     end, 
+    io:format("Length of Transactions : ~n ~w~n", [length(Transactions)]),
     TransactionIDs = case BlockNumber of
-    1 -> lists:seq(2, 11);
-    _ -> lists:seq((BlockNumber - 1) * 10 + 2, (BlockNumber * 10) + 1)
+        1 -> lists:seq(2, 11);
+        _ when length(Transactions) > 1 -> lists:seq((BlockNumber - 1) * 10 + 2, (BlockNumber - 1)  * 10 + length(Transactions) + 1);
+        _ when length(Transactions) == 1 -> [(BlockNumber - 1) * 10 + 2]
     end,
     io:format("Transaction Ids : ~n ~w~n", [TransactionIDs]),
     NewBlock = #block{
@@ -105,5 +107,7 @@ take_first_n(List, N) when N > 0 ->
 
 take_first_n(_, 0, Acc) ->
     lists:reverse(Acc);
+take_first_n([], N, Acc) when N > 0 ->
+    lists:reverse(Acc);  % Return whatever has been collected so far
 take_first_n([H | T], N, Acc) ->
     take_first_n(T, N - 1, [H | Acc]).
