@@ -1,5 +1,5 @@
 -module(writer_csv).
--export([write_blocks_to_csv/1, receive_block_data/1]).
+-export([write_blocks_to_csv/1, receive_block_data/1, clear_csv_file/0]).
 
 % Function to write block information to a CSV file
 write_blocks_to_csv(BlockDataList) ->
@@ -25,4 +25,8 @@ receive_block_data(BlockData) ->
     Line = io_lib:format("~w,~w,~s,~w,~s~n", [BlockNumber, MerkleRoot, NodeAddress, LastBlockHash, TransactionIDsStr]),
     file:write(File, Line),
     file:close(File).
-
+clear_csv_file() ->
+    FileName = "blocks_data.csv",
+    {ok, File} = file:open(FileName, [write]),
+    file:write(File, ""),  % Writing an empty string to the file clears its content
+    file:close(File).

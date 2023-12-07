@@ -21,12 +21,13 @@ start(Address,  NumValidators, NumNonValidators) ->
         transactions = []
     },
     AtomAddress = list_to_atom(Address),
+    writer_csv:clear_csv_file(),
     {ListValidators, ListNonValidators, ListBuilders} = create_node:create_nodes(NumValidators, NumNonValidators),
     Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
-    register(AtomAddress, Pid),
-    UpdatedBuilders = create_node:update_builder_pid(Pid, ListBuilders),
-    create_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders),
-    Pid.
+    register(AtomAddress, Pid).
+    %UpdatedBuilders = create_node:update_builder_pid(Pid, ListBuilders),
+    %create_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders),
+    %Pid.
 
 % Builder main loop
 builder_loop(Address, Block, ListValidators,ListNonValidators) ->
@@ -34,21 +35,21 @@ builder_loop(Address, Block, ListValidators,ListNonValidators) ->
 
 builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidators) ->
     % Read all transactions from the CSV file
-    AllTransactions = read_transactions("test_transactions.csv"),
+    AllTransactions = read_transactions("transactions.csv"),
     
     case lists:subtract(AllTransactions, ProcessedTransactions) of
         [] ->
             % No new transactions, stop the loop
             io:format("No new transactions. Stopping the loop.~n");
         ValidTransactions ->
-            io:format("Start loop ~n"),
+            %io:format("Start loop ~n"),
             % Take the first 10 transactions
             TransactionsForBlock = take_first_n(ValidTransactions, 10),
             %io:format("~p~n", [TransactionsForBlock]),
             NewBlock = create_block(Address, TransactionsForBlock, Block,ListValidators,ListNonValidators),
             % Update the list of processed transactions
             NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
-            io:format("End loop ~n"),
+            %io:format("End loop ~n"),
             % Continue the loop with the updated processed transactions
             builder_loop(Address, NewBlock, NewProcessedTransactions,ListValidators,ListNonValidators)
     end.
@@ -62,23 +63,23 @@ read_transactions(FilePath) ->
 create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
     BlockNumber =  Block#block.block_number + 1,
     MerkleRoot = merkle_tree:root_hash(Transactions),
-    io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
+    %io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
     LastBlockHash = case BlockNumber of
         1 -> 0;
         _ -> crypto:hash(sha256, term_to_binary(Block))
         
     end,
-    case LastBlockHash of 
-        0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
-        _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
-    end, 
-    io:format("Length of Transactions : ~n ~w~n", [length(Transactions)]),
+    %case LastBlockHash of 
+     %   0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
+      %  _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
+    %end, 
+    %io:format("Length of Transactions : ~n ~w~n", [length(Transactions)]),
     TransactionIDs = case BlockNumber of
         1 -> lists:seq(2, 11);
         _ when length(Transactions) > 1 -> lists:seq((BlockNumber - 1) * 10 + 2, (BlockNumber - 1)  * 10 + length(Transactions) + 1);
         _ when length(Transactions) == 1 -> [(BlockNumber - 1) * 10 + 2]
     end,
-    io:format("Transaction Ids : ~n ~w~n", [TransactionIDs]),
+    %io:format("Transaction Ids : ~n ~w~n", [TransactionIDs]),
     NewBlock = #block{
         block_number = BlockNumber,
         merkle_tree_root = MerkleRoot,
@@ -99,7 +100,7 @@ broadcast_block(ListValidators, ListNonValidators, NewBlock) ->
     ReceiverPids = ListValidators ++ ListNonValidators,
     lists:foreach(
         fun(NodePid) ->
-            io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {NewBlock},NodePid]),
+            %io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {NewBlock},NodePid]),
             my_node:sends_messages(self(), NodePid, {NewBlock})
         end,
         ReceiverPids
