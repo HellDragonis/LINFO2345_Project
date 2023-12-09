@@ -15,7 +15,8 @@ node_loop(Address) ->
         {From, {shuffled_list, ShuffledList}} ->
             election_protocol:receive_shuffled_list(ShuffledList),
             node_loop(Address);
-
+        {From, {new_proposer, NewProposerGroup}} ->
+            node_loop(Address);
         {From, Message} ->
             handle_message(Address, From, Message),
             node_loop(Address);
