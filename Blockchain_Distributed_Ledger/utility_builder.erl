@@ -1,5 +1,5 @@
--module(merkle_tree).
--export([build_tree/1, root_hash/1]).
+-module(utility_builder).
+-export([build_tree/1, root_hash/1, take_first_n/2]).
 
 
 % Function to build a Merkle tree from a list of data blocks
@@ -19,6 +19,21 @@ build_tree(Transactions) ->
             crypto:hash(sha256, <<LeftHash/binary, RightHash/binary>>)
     end.
 
+
+
 % Function to calculate the root hash of a Merkle tree
 root_hash(Transactions) ->
     build_tree(Transactions).
+
+
+
+% Take first N element of a list
+take_first_n(List, N) when N > 0 ->
+    take_first_n(List, N, []).
+
+take_first_n(_, 0, Acc) ->
+    lists:reverse(Acc);
+take_first_n([], N, Acc) when N > 0 ->
+    lists:reverse(Acc);  % Return whatever has been collected so far
+take_first_n([H | T], N, Acc) ->
+    take_first_n(T, N - 1, [H | Acc]).
