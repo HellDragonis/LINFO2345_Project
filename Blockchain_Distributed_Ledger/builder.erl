@@ -21,8 +21,8 @@ start(Address,  NumValidators, NumNonValidators) ->
         transactions = []
     },
     AtomAddress = list_to_atom(Address),
-    writer_csv:clear_csv_file(),
-    {ListValidators, ListNonValidators, ListBuilders} = create_node:create_nodes(NumValidators, NumNonValidators),
+    function_csv:clear_csv_file(),
+    {ListValidators, ListNonValidators, ListBuilders} = my_node:create_nodes(NumValidators, NumNonValidators),
     Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
     register(AtomAddress, Pid).
     %UpdatedBuilders = create_node:update_builder_pid(Pid, ListBuilders),
@@ -35,7 +35,7 @@ builder_loop(Address, Block, ListValidators,ListNonValidators) ->
 
 builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidators) ->
     % Read all transactions from the CSV file
-    AllTransactions = read_transactions("transactions.csv"),
+    AllTransactions = function_csv:read_csv_file("transactions.csv"),
     
     case lists:subtract(AllTransactions, ProcessedTransactions) of
         [] ->
@@ -53,10 +53,6 @@ builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidat
             % Continue the loop with the updated processed transactions
             builder_loop(Address, NewBlock, NewProcessedTransactions,ListValidators,ListNonValidators)
     end.
-
-read_transactions(FilePath) ->
-    Data = csv_reader:read_csv_file(FilePath),
-    Data.
 
 
 % Function to create a new block and broadcast it
@@ -89,7 +85,7 @@ create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
     },
     
     BlockData = {BlockNumber, MerkleRoot, Address, LastBlockHash, TransactionIDs},
-    writer_csv:receive_block_data(BlockData), 
+    function_csv:receive_block_data(BlockData), 
     broadcast_block(ListValidators, ListNonValidators,NewBlock ),
     NewBlock.
 
