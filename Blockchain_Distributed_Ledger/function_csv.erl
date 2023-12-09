@@ -57,3 +57,4 @@ clear_csv_file() ->
     {ok, File} = file:open(FileName, [write]),
     file:write(File, ""),  % Writing an empty string to the file clears its content
     file:close(File).
+

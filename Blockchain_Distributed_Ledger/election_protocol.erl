@@ -26,14 +26,20 @@ start_election(State) ->
 
 % Function to receive the shuffled list from the previous validator
 receive_shuffled_list(ShuffledList) ->
+    ok.
     % Implement the logic to receive the shuffled list from the previous validator.
     % This function will be called for each validator in the network.
 
 % Function to reshuffle the list and send it to the next validator
 reshuffle_and_send(CurrentValidator_index, List, proposer_group_head) ->
     ShuffledList = shuffle_list(List),
+<<<<<<< HEAD
     send_to_next_validator(ShuffledList, CurrentValidator_index, proposer_group_head).
 
+=======
+    CurrentValidator = 1,
+    send_to_next_validator(ShuffledList, CurrentValidator).
+>>>>>>> 745deda741920f93b658510e0a7461956a516f43
 
 % Function to simulate sending the shuffled list to the next validator
 send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) ->
@@ -66,16 +72,17 @@ select_proposers(State) ->
 
 % Function to simulate broadcasting the beginning of an election
 broadcast_begin_election(ProposerGroupHead, BuilderNode) ->
-    % Implement the logic to broadcast the message to stop block creation.
-    % This may involve sending a message to the first node in the current proposer group.
+    BuilderNode ! {begin_election, ProposerGroupHead, BuilderNode}.
 
 % Function to broadcast the new proposer group to all nodes
 broadcast_new_proposers(NewProposerGroup) ->
+    ok.
     % Implement the logic to broadcast the new proposer group to all nodes.
     % This may involve sending a message to each node in the network.
 
 % Function to simulate broadcasting the beginning of a new epoch
 broadcast_new_epoch(NewProposerGroupHead) ->
+    ok.
     % Implement the logic to broadcast the new epoch message.
     % This may involve sending a message to the first node in the new proposer group.
 
@@ -112,11 +119,11 @@ select_top_10_percent(ShuffledList) ->
 
 % Function to get the number of the next validator
 get_next_validator_number(CurrentValidator) ->
-    {_, Number} = lists:keyfind(CurrentValidator, 1, validator_numbers()),
-    NextNumber = (Number mod number_of_validators()) + 1,
+    {_, Number} = lists:keyfind(CurrentValidator, 1, 4), % Instead of 4, it is the number of validator
+    NextNumber = (Number rem number_of_validators()) + 1,
     NextNumber.
 
 % Function to get the total number of validators
 number_of_validators() ->
-    length(validator_numbers()).
+    4.
 
