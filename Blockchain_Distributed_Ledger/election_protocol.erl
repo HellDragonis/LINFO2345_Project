@@ -82,7 +82,7 @@ broadcast_new_proposers(NewProposerGroup, State) ->
     lists:foreach(
         fun(NodePid) ->
             %io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {NewProposerGroup},NodePid]),
-            my_node:sends_messages(self(), NodePid, {NewProposerGroup})
+            my_node:sends_messages(self(), NodePid, {new_proposer, NewProposerGroup})
         end,
         ValidatorList
     ).
@@ -147,8 +147,12 @@ number_of_validators(State) ->
 
 % Function to log the state to the "election_log.txt" file
 log_state(State) ->
-    file:write_file("election_log.txt", io_lib:format("~p.~n", [State])).
+    {ok, File} = file:open("election_log.txt", [append]),
+    io:format(File, "~p.~n", [State]),
+    file:close(File).
 
 % Function to log an operation to the "election_log.txt" file
 log_operation(Operation, Pid) ->
-    file:write_file("election_log.txt", io_lib:format("~s ~p.~n", [Operation, Pid])).
+    {ok, File} = file:open("election_log.txt", [append]),
+    io:format(File, "~s ~p.~n", [Operation, Pid]),
+    file:close(File).
