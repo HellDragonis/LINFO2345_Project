@@ -34,6 +34,8 @@ builder_loop(Address, Block, ListValidators,ListNonValidators) ->
     builder_loop(Address, Block, [], ListValidators,ListNonValidators).
 
 builder_loop(Address, Block, ProcessedTransactions, ListValidators, ListNonValidators) ->
+    % Read all transactions from the CSV file
+    AllTransactions = utility_builder:read_transactions("transactions.csv"),
     receive
         % Message indicating the beginning of an election
         {begin_election, ProposerGroupHead, BuilderNode} ->
@@ -43,25 +45,9 @@ builder_loop(Address, Block, ProcessedTransactions, ListValidators, ListNonValid
 
         % Message indicating block creation
         create_block ->
-            % Read all transactions from the CSV file
-            AllTransactions = utility_builder:read_transactions("transactions.csv"),
-            
-            case lists:subtract(AllTransactions, ProcessedTransactions) of
-                [] ->
-                    % No new transactions, stop the loop
-                    io:format("No new transactions. Stopping the loop.~n");
-                ValidTransactions ->
-                    io:format("Start loop ~n"),
-                    % Take the first 10 transactions
-                    TransactionsForBlock = utility_builder:take_first_n(ValidTransactions, 10),
-                    io:format("~p~n", [TransactionsForBlock]),
-                    NewBlock = create_block(Address, TransactionsForBlock, Block,ListValidators,ListNonValidators),
-                    % Update the list of processed transactions
-                    NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
-                    io:format("End loop ~n"),
-                    % Continue the loop with the updated processed transactions
-                    builder_loop(Address, NewBlock, NewProcessedTransactions,ListValidators,ListNonValidators)
-            end;
+            NumBlocks = 10,
+            {NewBlock, NewProcessedTransactions} = create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValidators, ListNonValidators, NumBlocks),
+            builder_loop(Address, NewBlock, NewProcessedTransactions,ListValidators,ListNonValidators);
 
         % Other messages (if any) can be handled here
         _ ->
@@ -81,10 +67,32 @@ wait_for_resume(Address, Block, ProcessedTransactions, ListValidators, ListNonVa
             wait_for_resume(Address, Block, ProcessedTransactions, ListValidators, ListNonValidators)
     end.
 
+create_blocks(_, NewBlock, _, NewProcessedTransactions, _, _, 0) ->
+    {NewBlock, NewProcessedTransactions};
+create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValidators, ListNonValidators, NumBlocks) ->
+    case lists:subtract(AllTransactions, ProcessedTransactions) of
+        [] ->
+            % No new transactions, stop the loop
+            io:format("No new transactions. Stopping the loop.~n"),
+        create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValidators, ListNonValidators, 0);
+        ValidTransactions ->
+            io:format("Start loop ~n"),
+            % Take the first 10 transactions
+            TransactionsForBlock = utility_builder:take_first_n(ValidTransactions, 10),
+            io:format("~p~n", [TransactionsForBlock]),
+            NewBlock = create_block(Address, TransactionsForBlock, Block, ListValidators, ListNonValidators),
+            % Update the list of processed transactions
+            NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
+            io:format("End loop ~n"),
+            % Continue the loop with the updated processed transactions
+            create_blocks(Address, NewBlock, AllTransactions, NewProcessedTransactions, ListValidators, ListNonValidators, NumBlocks - 1)
+    end.
+
 
 % Function to create a new block and broadcast it
 create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
     BlockNumber =  Block#block.block_number + 1,
+    io:format("Block Number : ~n ~p~n", [BlockNumber]),
     MerkleRoot = utility_builder:root_hash(Transactions),
     io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
     LastBlockHash = case BlockNumber of
