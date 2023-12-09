@@ -1,5 +1,5 @@
 -module(election_protocol).
--export([init/2, start_election/1, receive_shuffled_list/1, select_proposers/1, broadcast_new_proposers/1]).
+-export([init/2, start_election/1, receive_shuffled_list/1, select_proposers/1, broadcast_new_proposers/1, send_to_next_validator/3]).
 
 % Initialization function, called at the bootstrapping
 init(ValidatorList, BuilderNode) ->
@@ -30,17 +30,25 @@ receive_shuffled_list(ShuffledList) ->
     % This function will be called for each validator in the network.
 
 % Function to reshuffle the list and send it to the next validator
-reshuffle_and_send(List) ->
+reshuffle_and_send(CurrentValidator_index, List, proposer_group_head) ->
     ShuffledList = shuffle_list(List),
-    send_to_next_validator(ShuffledList).
+    send_to_next_validator(ShuffledList, CurrentValidator_index, proposer_group_head).
+
 
 % Function to simulate sending the shuffled list to the next validator
-send_to_next_validator(ShuffledList, CurrentValidator) ->
-    NextValidatorNumber = get_next_validator_number(CurrentValidator),
-    NextValidator = list_to_atom("Validator_" ++ integer_to_list(NextValidatorNumber)),
-    % Implement the logic to send the shuffled list to the next validator (for example, using message passing)
-    io:format("Sending shuffled list to ~p~n", [NextValidator]),
-    NextValidator ! {shuffled_list, ShuffledList}.
+send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) ->
+    case ProposerGroupHead of
+        [] ->
+            io:format("Proposer group head is empty. Unable to send the shuffled list.~n");
+        _ when is_list(ProposerGroupHead) ->
+            NextIndex = (CurrentValidatorIndex rem length(ProposerGroupHead)) + 1,
+            Current_val = lists:nth(CurrentValidatorIndex, ProposerGroupHead),
+            NextValidatorPid = lists:nth(NextIndex, ProposerGroupHead),
+            io:format("Sending shuffled list for ~p to ~p~n", [Current_val, NextValidatorPid]),
+            my_node:sends_messages(Current_val, NextValidatorPid, {ShuffledList});
+        _ ->
+            io:format("Proposer group head is not a list. Unable to send the shuffled list.~n")
+    end.
 
 
 % Function to select the proposers and update the state

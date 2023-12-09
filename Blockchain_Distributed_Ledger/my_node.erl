@@ -60,7 +60,7 @@ add_builder(BuilderPid, ListBuilders) ->
     [BuilderPid | ListBuilders].
 
 update_builder_pid(Pid, ListBuilders) ->
-    create_node:add_builder(Pid, ListBuilders).
+    add_builder(Pid, ListBuilders).
 
 display_lists(ListValidators, ListNonValidators, ListBuilders) ->
     io:format("Validators nodes: ~p~n", [ListValidators]),
