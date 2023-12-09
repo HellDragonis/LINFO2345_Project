@@ -1,7 +1,7 @@
 % Implement a builder that can create blocks from a pending transaction CSV.
 % Implement a broadcast step to disseminate a block to all other nodes.
 -module(builder).
--export([start/3, create_block/5, broadcast_block/3, send_to_next_validator/3 ]).
+-export([start/3, create_block/5, broadcast_block/3]).
 
 -record(block, {
     block_number,
@@ -26,7 +26,8 @@ start(Address,  NumValidators, NumNonValidators) ->
     Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
     register(AtomAddress, Pid),
     UpdatedBuilders = my_node:update_builder_pid(Pid, ListBuilders),
-    my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders).
+    my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders),
+    {ListValidators, ListNonValidators, Pid}.
     %Pid.
 
 % Builder main loop

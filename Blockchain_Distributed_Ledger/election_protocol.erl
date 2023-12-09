@@ -3,12 +3,13 @@
 
 % Initialization function, called at the bootstrapping
 init(ValidatorList, BuilderNode) ->
+    file:delete("election_log.txt"),
     % Store the initial list of validators and current proposer group head
     Top10Percent = select_top_10_percent(ValidatorList),
     State = #{validators => ValidatorList, proposer_group_head => Top10Percent, builder => BuilderNode},
 
     % Save the initial state to a file for logging purposes
-    file:write_file("election_log.txt", io_lib:format("~p.~n", [State])),
+    log_state(State),
     State.
 
 % Function to initiate a new election
@@ -22,9 +23,9 @@ start_election(State) ->
 
     % Broadcast the beginning of the election to stop block creation
     broadcast_begin_election(FirstNode, BuilderNode),
-    NewState = select_proposers(State),
-    NewProposerGroup = maps:get(proposer_group_head, NewState),
-    broadcast_new_proposers(NewProposerGroup, NewState),
+    %NewState = select_proposers(State),
+    %NewProposerGroup = maps:get(proposer_group_head, NewState),
+    broadcast_new_proposers(ProposerGroupHead, State),
     broadcast_new_epoch(BuilderNode).
 
 
@@ -35,9 +36,9 @@ receive_shuffled_list(ShuffledList) ->
     % This function will be called for each validator in the network.
 
 % Function to reshuffle the list and send it to the next validator
-reshuffle_and_send(CurrentValidator_index, List, proposer_group_head) ->
+reshuffle_and_send(CurrentValidator_index, List, ProposerGroupHead) ->
     ShuffledList = shuffle_list(List),
-    send_to_next_validator(ShuffledList, CurrentValidator_index, proposer_group_head).
+    send_to_next_validator(ShuffledList, CurrentValidator_index, ProposerGroupHead).
 
 
 % Function to simulate sending the shuffled list to the next validator
@@ -50,7 +51,8 @@ send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) -
             Current_val = lists:nth(CurrentValidatorIndex, ProposerGroupHead),
             NextValidatorPid = lists:nth(NextIndex, ProposerGroupHead),
             io:format("Sending shuffled list for ~p to ~p~n", [Current_val, NextValidatorPid]),
-            my_node:sends_messages(Current_val, NextValidatorPid, {ShuffledList});
+            my_node:sends_messages(Current_val, NextValidatorPid, {ShuffledList}),
+            log_operation("Sent shuffled list to", NextValidatorPid);
         _ ->
             io:format("Proposer group head is not a list. Unable to send the shuffled list.~n")
     end.
@@ -59,11 +61,14 @@ send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) -
 % Function to select the proposers and update the state
 select_proposers(State) ->
     AllValidators = maps:get(validators, State),
-    ShuffledList = reshuffle_and_send(AllValidators),
+    ProposerGroupHead = maps:get(proposer_group_head, State),
+    ShuffleList = shuffle_list(AllValidators),
+    CurrentValidator_index = get_validator_index(hd(AllValidators)),
+    ShuffledList = reshuffle_and_send(CurrentValidator_index, ShuffleList, ProposerGroupHead),
     ProposerGroup = select_top_10_percent(ShuffledList),
     NewState = State#{proposer_group_head => ProposerGroup},
     % Log the election details to the file
-    file:write_file("election_log.txt", io_lib:format("~p.~n", [NewState])),
+    log_state(NewState),
     NewState.
 
 
@@ -71,7 +76,8 @@ select_proposers(State) ->
 
 % Function to simulate broadcasting the beginning of an election
 broadcast_begin_election(ProposerGroupHead, BuilderNode) ->
-    BuilderNode ! {begin_election, ProposerGroupHead, BuilderNode}.
+    BuilderNode ! {begin_election, ProposerGroupHead, BuilderNode},
+    log_operation("Broadcasted begin_election to", BuilderNode).
 
 % Function to broadcast the new proposer group to all nodes
 broadcast_new_proposers(NewProposerGroup, State) ->
@@ -87,7 +93,8 @@ broadcast_new_proposers(NewProposerGroup, State) ->
 % Function to simulate broadcasting the beginning of a new epoch
 broadcast_new_epoch(BuilderNode) ->
     BuilderNode ! resume_block_creation,
-    BuilderNode ! create_block.
+    BuilderNode ! create_block,
+    log_operation("Broadcasted new_epoch to", BuilderNode).
 
 
 % ---Utility functions---
@@ -119,14 +126,32 @@ select_top_10_percent(ShuffledList) ->
     MinCount = max(TenPercent, 1),
     lists:sublist(ShuffledList, 1, MinCount).
 
+get_validator_index(Validator) ->
+    ValidatorName = case erlang:process_info(Validator, registered_name) of
+        {registered_name, RegisteredName} -> RegisteredName;
+        _ -> atom_to_list(Validator)  % If not registered, assume it's already a name
+    end,
+    io:format("Validator Name : ~n ~s~n", [ValidatorName]),
+    case re:run(ValidatorName, "Validators_(\\d+)", [{capture, [1]}]) of
+        {match, [IndexStr]} ->
+            io:format("Matched Index: ~s~n", [IndexStr]),
+            list_to_integer(IndexStr);
+        nomatch ->
+            io:format("No match~n"),
+            0  % Return 0 or another default value if the pattern doesn't match
+    end.
 
-% Function to get the number of the next validator
-get_next_validator_number(CurrentValidator) ->
-    {_, Number} = lists:keyfind(CurrentValidator, 1, 4), % Instead of 4, it is the number of validator
-    NextNumber = (Number rem number_of_validators()) + 1,
-    NextNumber.
 
 % Function to get the total number of validators
-number_of_validators() ->
-    4.
+number_of_validators(State) ->
+    ValidatorList = maps:get(validators, State),
+    NumberOfValidator = length(ValidatorList),
+    NumberOfValidator.
 
+% Function to log the state to the "election_log.txt" file
+log_state(State) ->
+    file:write_file("election_log.txt", io_lib:format("~p.~n", [State])).
+
+% Function to log an operation to the "election_log.txt" file
+log_operation(Operation, Pid) ->
+    file:write_file("election_log.txt", io_lib:format("~s ~p.~n", [Operation, Pid])).
