@@ -1,7 +1,7 @@
 % Implement a builder that can create blocks from a pending transaction CSV.
 % Implement a broadcast step to disseminate a block to all other nodes.
 -module(builder).
--export([start/3, create_block/5, broadcast_block/3, send_to_next_validator/3 ]).
+-export([start/3, create_block/5, broadcast_block/3]).
 
 -record(block, {
     block_number,
@@ -26,13 +26,8 @@ start(Address,  NumValidators, NumNonValidators) ->
     Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
     register(AtomAddress, Pid),
     UpdatedBuilders = my_node:update_builder_pid(Pid, ListBuilders),
-<<<<<<< HEAD
     my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders).
     %Pid.
-=======
-    my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders),
-    Pid.
->>>>>>> 745deda741920f93b658510e0a7461956a516f43
 
 % Builder main loop
 builder_loop(Address, Block, ListValidators,ListNonValidators) ->
@@ -40,10 +35,6 @@ builder_loop(Address, Block, ListValidators,ListNonValidators) ->
 
 builder_loop(Address, Block, ProcessedTransactions, ListValidators, ListNonValidators) ->
     % Read all transactions from the CSV file
-<<<<<<< HEAD
-    AllTransactions = function_csv:read_csv_file("transactions.csv"),
-    
-=======
     AllTransactions = utility_builder:read_transactions("transactions.csv"),
     receive
         % Message indicating the beginning of an election
@@ -79,7 +70,6 @@ wait_for_resume(Address, Block, ProcessedTransactions, ListValidators, ListNonVa
 create_blocks(_, NewBlock, _, NewProcessedTransactions, _, _, 0) ->
     {NewBlock, NewProcessedTransactions};
 create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValidators, ListNonValidators, NumBlocks) ->
->>>>>>> 745deda741920f93b658510e0a7461956a516f43
     case lists:subtract(AllTransactions, ProcessedTransactions) of
         [] ->
             % No new transactions, stop the loop
