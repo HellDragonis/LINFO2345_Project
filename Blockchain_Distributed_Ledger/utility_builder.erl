@@ -1,5 +1,5 @@
 -module(utility_builder).
--export([build_tree/1, root_hash/1, take_first_n/2]).
+-export([build_tree/1, root_hash/1, take_first_n/2, read_transactions/1]).
 
 
 % Function to build a Merkle tree from a list of data blocks
@@ -37,3 +37,8 @@ take_first_n([], N, Acc) when N > 0 ->
     lists:reverse(Acc);  % Return whatever has been collected so far
 take_first_n([H | T], N, Acc) ->
     take_first_n(T, N - 1, [H | Acc]).
+
+
+read_transactions(FilePath) ->
+    Data = function_csv:read_csv_file(FilePath),
+    Data.

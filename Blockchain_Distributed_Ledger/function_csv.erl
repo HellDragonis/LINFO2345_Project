@@ -1,4 +1,4 @@
--module(csv).
+-module(function_csv).
 -export([read_csv_file/1, print_csv_data/1, write_blocks_to_csv/1, receive_block_data/1, clear_csv_file/0]).
 
 

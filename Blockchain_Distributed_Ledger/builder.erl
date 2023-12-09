@@ -35,11 +35,7 @@ builder_loop(Address, Block, ListValidators,ListNonValidators) ->
 
 builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidators) ->
     % Read all transactions from the CSV file
-<<<<<<< HEAD
-    AllTransactions = function_csv:read_csv_file("transactions.csv"),
-=======
-    AllTransactions = csv_reader:read_csv_file("transactions.csv"),
->>>>>>> 28d0d3e7ec2e8d356d86c883d9beedfbf18fc060
+    AllTransactions = utility_builder:read_transactions("transactions.csv"),
     
     case lists:subtract(AllTransactions, ProcessedTransactions) of
         [] ->

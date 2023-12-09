@@ -1,7 +1,6 @@
 erlc ./my_node.erl
 erlc ./create_node.erl
-erlc ./merkle_tree.erl
-erlc ./csv_reader.erl
-erlc ./writer_csv.erl
+erlc ./function_csv.erl
 erlc ./test.erl
+erlc ./utility_builder.erl
 erlc ./builder.erl
