@@ -26,7 +26,8 @@ start(Address,  NumValidators, NumNonValidators) ->
     Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
     register(AtomAddress, Pid),
     UpdatedBuilders = my_node:update_builder_pid(Pid, ListBuilders),
-    my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders).
+    my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders),
+    {ListValidators, ListNonValidators, Pid}.
     %Pid.
 
 % Builder main loop
