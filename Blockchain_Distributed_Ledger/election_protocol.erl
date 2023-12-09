@@ -1,5 +1,5 @@
 -module(election_protocol).
--export([init/2, start_election/1, receive_shuffled_list/1, select_proposers/1, broadcast_new_proposers/1, send_to_next_validator/3]).
+-export([init/2, start_election/1, receive_shuffled_list/1, select_proposers/1, broadcast_new_proposers/2, send_to_next_validator/3]).
 
 % Initialization function, called at the bootstrapping
 init(ValidatorList, BuilderNode) ->
@@ -21,7 +21,11 @@ start_election(State) ->
     BuilderNode = maps:get(builder, State),
 
     % Broadcast the beginning of the election to stop block creation
-    broadcast_begin_election(FirstNode, BuilderNode).
+    broadcast_begin_election(FirstNode, BuilderNode),
+    NewState = select_proposers(State),
+    NewProposerGroup = maps:get(proposer_group_head, NewState),
+    broadcast_new_proposers(NewProposerGroup, NewState),
+    broadcast_new_epoch(BuilderNode).
 
 
 % Function to receive the shuffled list from the previous validator
@@ -33,13 +37,8 @@ receive_shuffled_list(ShuffledList) ->
 % Function to reshuffle the list and send it to the next validator
 reshuffle_and_send(CurrentValidator_index, List, proposer_group_head) ->
     ShuffledList = shuffle_list(List),
-<<<<<<< HEAD
     send_to_next_validator(ShuffledList, CurrentValidator_index, proposer_group_head).
 
-=======
-    CurrentValidator = 1,
-    send_to_next_validator(ShuffledList, CurrentValidator).
->>>>>>> 745deda741920f93b658510e0a7461956a516f43
 
 % Function to simulate sending the shuffled list to the next validator
 send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) ->
@@ -75,16 +74,20 @@ broadcast_begin_election(ProposerGroupHead, BuilderNode) ->
     BuilderNode ! {begin_election, ProposerGroupHead, BuilderNode}.
 
 % Function to broadcast the new proposer group to all nodes
-broadcast_new_proposers(NewProposerGroup) ->
-    ok.
-    % Implement the logic to broadcast the new proposer group to all nodes.
-    % This may involve sending a message to each node in the network.
+broadcast_new_proposers(NewProposerGroup, State) ->
+    ValidatorList = maps:get(validators, State),
+    lists:foreach(
+        fun(NodePid) ->
+            %io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {NewProposerGroup},NodePid]),
+            my_node:sends_messages(self(), NodePid, {NewProposerGroup})
+        end,
+        ValidatorList
+    ).
 
 % Function to simulate broadcasting the beginning of a new epoch
-broadcast_new_epoch(NewProposerGroupHead) ->
-    ok.
-    % Implement the logic to broadcast the new epoch message.
-    % This may involve sending a message to the first node in the new proposer group.
+broadcast_new_epoch(BuilderNode) ->
+    BuilderNode ! resume_block_creation,
+    BuilderNode ! create_block.
 
 
 % ---Utility functions---
