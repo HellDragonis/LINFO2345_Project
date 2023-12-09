@@ -12,6 +12,10 @@ start(Address) ->
 node_loop(Address) ->
     receive
         % Handling incoming messages
+        {From, {shuffled_list, ShuffledList}} ->
+            election_protocol:receive_shuffled_list(ShuffledList),
+            node_loop(Address);
+
         {From, Message} ->
             handle_message(Address, From, Message),
             node_loop(Address);
