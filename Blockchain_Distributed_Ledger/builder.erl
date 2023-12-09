@@ -35,7 +35,7 @@ builder_loop(Address, Block, ListValidators,ListNonValidators) ->
 
 builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidators) ->
     % Read all transactions from the CSV file
-    AllTransactions = read_transactions("transactions.csv"),
+    AllTransactions = csv_reader:read_csv_file("transactions.csv"),
     
     case lists:subtract(AllTransactions, ProcessedTransactions) of
         [] ->
@@ -44,7 +44,7 @@ builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidat
         ValidTransactions ->
             %io:format("Start loop ~n"),
             % Take the first 10 transactions
-            TransactionsForBlock = take_first_n(ValidTransactions, 10),
+            TransactionsForBlock = utility_builder:take_first_n(ValidTransactions, 10),
             %io:format("~p~n", [TransactionsForBlock]),
             NewBlock = create_block(Address, TransactionsForBlock, Block,ListValidators,ListNonValidators),
             % Update the list of processed transactions
@@ -54,15 +54,11 @@ builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidat
             builder_loop(Address, NewBlock, NewProcessedTransactions,ListValidators,ListNonValidators)
     end.
 
-read_transactions(FilePath) ->
-    Data = csv_reader:read_csv_file(FilePath),
-    Data.
-
 
 % Function to create a new block and broadcast it
 create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
     BlockNumber =  Block#block.block_number + 1,
-    MerkleRoot = merkle_tree:root_hash(Transactions),
+    MerkleRoot = utility_builder:root_hash(Transactions),
     %io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
     LastBlockHash = case BlockNumber of
         1 -> 0;
@@ -87,12 +83,10 @@ create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
         last_block_hash = LastBlockHash,
         transactions = Transactions
     },
-    
     BlockData = {BlockNumber, MerkleRoot, Address, LastBlockHash, TransactionIDs},
     writer_csv:receive_block_data(BlockData), 
     broadcast_block(ListValidators, ListNonValidators,NewBlock ),
     NewBlock.
-
 
 
 % Function to broadcast a block to all nodes
@@ -105,16 +99,3 @@ broadcast_block(ListValidators, ListNonValidators, NewBlock) ->
         end,
         ReceiverPids
     ).
-
-
-
-% Helper functions
-take_first_n(List, N) when N > 0 ->
-    take_first_n(List, N, []).
-
-take_first_n(_, 0, Acc) ->
-    lists:reverse(Acc);
-take_first_n([], N, Acc) when N > 0 ->
-    lists:reverse(Acc);  % Return whatever has been collected so far
-take_first_n([H | T], N, Acc) ->
-    take_first_n(T, N - 1, [H | Acc]).

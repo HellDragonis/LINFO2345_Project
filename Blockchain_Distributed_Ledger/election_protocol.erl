@@ -48,8 +48,7 @@ select_proposers(State) ->
     AllValidators = maps:get(validators, State),
     ShuffledList = reshuffle_and_send(AllValidators),
     ProposerGroup = select_top_10_percent(ShuffledList),
-    NewProposerGroupHead = lists:first(ProposerGroup),
-    NewState = State#{proposer_group_head => NewProposerGroupHead},
+    NewState = State#{proposer_group_head => ProposerGroup},
     % Log the election details to the file
     file:write_file("election_log.txt", io_lib:format("~p.~n", [NewState])),
     NewState.
