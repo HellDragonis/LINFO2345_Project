@@ -46,11 +46,11 @@ reshuffle_and_send(CurrentValidator_index, List, ProposerGroupHead, ParentId) ->
     NextIndex = length(ProposerGroupHead) + 1,
     case CurrentValidator_index of
         NextIndex ->
-            io:format("Going to send_back ~p ~n", [List]),
+            %io:format("Going to send_back ~p ~n", [List]),
             send_back(List, ProposerGroupHead, Last_val, ParentId),
             ShuffledList; % Return ShuffledList when NextIndex matches
         _ ->
-            io:format("New shuffled list is: ~p, sending it to ~p ~n", [ShuffledList, CurrentValidator_index]),
+            %io:format("New shuffled list is: ~p, sending it to ~p ~n", [ShuffledList, CurrentValidator_index]),
             send_to_next_validator(ShuffledList, CurrentValidator_index, ProposerGroupHead, ParentId),
             ShuffledList % Return ShuffledList when NextIndex doesn't match
     end.
@@ -81,19 +81,26 @@ send_back(ShuffledList, ProposerGroupHead, Last_index, ParentId) ->
     CurrentValidatorIndex =1,
     Current_val = lists:nth(CurrentValidatorIndex, ProposerGroupHead),
     Last_val = lists:nth(Last_index, ProposerGroupHead),
-    io:format("Just before send in send back~n ~p~n ~p~n ~p~n", [Current_val, Last_val, self()]),
+    %io:format("Just before send in send back~n ~p~n ~p~n ~p~n", [Current_val, Last_val, self()]),
     my_node:sends_messages(Current_val, Last_val, {last_val, ShuffledList, ParentId}).
 
 % Function to select the proposers and update the state
 select_proposers(State, ParentId) ->
+    StartTimestamp = erlang:timestamp(),  % Record start time
+
     AllValidators = maps:get(validators, State),
     ProposerGroupHead = maps:get(proposer_group_head, State),
     ShuffleList = shuffle_list(AllValidators),
     TempShuffledList = reshuffle_and_send(1, ShuffleList, ProposerGroupHead, ParentId),
     ShuffledList = wait_for_shuffled_results(),
-    io:format("Final Shuffled List ~n ~p~n", [ShuffledList]),
+    %io:format("Final Shuffled List ~n ~p~n", [ShuffledList]),
     ProposerGroup = select_top_10_percent(ShuffledList),
     NewState = State#{proposer_group_head => ProposerGroup},
+
+    EndTimestamp = erlang:timestamp(),  % Record end time
+    TimeDiff = timer:now_diff(EndTimestamp, StartTimestamp),  % Calculate time difference
+    io:format("select_proposers took ~p microseconds.~n", [TimeDiff]),
+
     % Log the election details to the file
     log_state(NewState),
     NewState.
@@ -218,7 +225,7 @@ clear_log_file(BuilderNode) ->
 
 
 wait_for_shuffled_results() ->
-    io:format("Wait"),
+    %io:format("Wait"),
     receive
         % Message indicating validation result from a validator
         {From, {shuffled_result, ShuffledList}} ->

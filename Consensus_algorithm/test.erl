@@ -21,6 +21,6 @@ run_builder() ->
     builder:start("Builder_1", 4, 5).
 
 run_election() ->
-    {Val, NonVal, Builder} = builder:start("Builder_1", 20, 5),
+    {Val, NonVal, Builder} = builder:start("Builder_1", 25, 4),
     State = election_protocol:init(Val, Builder),
     State.

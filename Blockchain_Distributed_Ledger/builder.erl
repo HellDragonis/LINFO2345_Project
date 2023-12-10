@@ -75,10 +75,10 @@ create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
     %end, 
     %io:format("Length of Transactions : ~n ~w~n", [length(Transactions)]),
     TransactionIDs = case {BlockNumber, length(Transactions)} of
-    {1, _} -> lists:seq(2, 11);
-    {BlockNum, Length} when Length > 1 -> lists:seq((BlockNum - 1) * 10 + 2, (BlockNum - 1)  * 10 + Length + 1);
-    {BlockNum, 1} -> [(BlockNum - 1) * 10 + 2];
-    _ -> []  % Handle other cases or provide a default value
+        {1, _} -> lists:seq(2, 11);
+        {BlockNum, Length} when Length > 1 -> lists:seq((BlockNum - 1) * 10 + 2, (BlockNum - 1)  * 10 + Length + 1);
+        {BlockNum, 1} -> [(BlockNum - 1) * 10 + 2];
+        _ -> []  % Handle other cases or provide a default value
     end,
     %io:format("Transaction Ids : ~n ~w~n", [TransactionIDs]),
     NewBlock = #block{

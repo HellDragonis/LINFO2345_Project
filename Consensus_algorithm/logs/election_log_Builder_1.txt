@@ -1,2 +1,0 @@
-Broadcasted begin_election to <0.106.0>.
-Broadcasted new_epoch to <0.106.0>.

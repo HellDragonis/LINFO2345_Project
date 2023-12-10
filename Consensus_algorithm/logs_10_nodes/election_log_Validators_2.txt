@@ -1,0 +1,7 @@
+#{builder => <0.90.0>,
+  proposer_group_head => [<0.85.0>],
+  validators => [<0.85.0>,<0.84.0>,<0.83.0>,<0.82.0>,<0.81.0>]}.
+#{builder => <0.90.0>,
+  proposer_group_head => [<0.85.0>],
+  validators => [<0.85.0>,<0.84.0>,<0.83.0>,<0.82.0>,<0.81.0>]}.
+Sent new proposer group to: <0.84.0>.

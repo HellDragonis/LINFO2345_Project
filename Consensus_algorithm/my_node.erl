@@ -18,9 +18,9 @@ node_loop(Address) ->
             node_loop(Address);
 
         {From, {last_val, ShuffledList, ParentId}} -> 
-            io:format("Going in the right loop ~n"),
+            %io:format("Going in the right loop ~n"),
             NodePid = whereis(Address),
-            io:format("Adrress is ~p and NodePid is ~p and From is ~p~n", [Address, NodePid, From]),
+            %io:format("Adrress is ~p and NodePid is ~p and From is ~p~n", [Address, NodePid, From]),
             sends_messages(NodePid, ParentId, {shuffled_result, ShuffledList}),
             node_loop(Address);
         {From, {new_proposer, NewProposerGroup}} ->
@@ -43,7 +43,8 @@ handle_message(Address, From, Message) ->
     FromName = case erlang:process_info(From, registered_name) of
         {registered_name, RegisteredName} -> RegisteredName;
         _ -> atom_to_list(From)  % If not registered, assume it's already a name
-    end.
+    end,
+    {Address, Message, FromName}.
     % Implement the transaction asked here, and send an acknowledgement (TODO)
     %io:format("Node ~p received message from ~s: ~w~n", [Address, FromName, Message]).
 
