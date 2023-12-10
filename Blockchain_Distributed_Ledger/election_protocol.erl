@@ -23,7 +23,7 @@ start_election(State) ->
 
     % Broadcast the beginning of the election to stop block creation
     broadcast_begin_election(FirstNode, BuilderNode),
-    %NewState = select_proposers(State),
+    NewState = select_proposers(State),
     %NewProposerGroup = maps:get(proposer_group_head, NewState),
     broadcast_new_proposers(ProposerGroupHead, State),
     broadcast_new_epoch(BuilderNode).
@@ -35,7 +35,8 @@ receive_shuffled_list(ShuffledList) ->
 % Function to reshuffle the list and send it to the next validator
 reshuffle_and_send(CurrentValidator_index, List, ProposerGroupHead) ->
     ShuffledList = shuffle_list(List),
-    send_to_next_validator(ShuffledList, CurrentValidator_index, ProposerGroupHead).
+    send_to_next_validator(ShuffledList, CurrentValidator_index, ProposerGroupHead),
+    ShuffledList.
 
 
 % Function to simulate sending the shuffled list to the next validator
@@ -60,8 +61,7 @@ select_proposers(State) ->
     AllValidators = maps:get(validators, State),
     ProposerGroupHead = maps:get(proposer_group_head, State),
     ShuffleList = shuffle_list(AllValidators),
-    CurrentValidator_index = get_validator_index(hd(AllValidators)),
-    ShuffledList = reshuffle_and_send(CurrentValidator_index, ShuffleList, ProposerGroupHead),
+    ShuffledList = reshuffle_and_send(1, ShuffleList, ProposerGroupHead),
     ProposerGroup = select_top_10_percent(ShuffledList),
     NewState = State#{proposer_group_head => ProposerGroup},
     % Log the election details to the file
@@ -123,20 +123,6 @@ select_top_10_percent(ShuffledList) ->
     MinCount = max(TenPercent, 1),
     lists:sublist(ShuffledList, 1, MinCount).
 
-get_validator_index(Validator) ->
-    ValidatorName = case erlang:process_info(Validator, registered_name) of
-        {registered_name, RegisteredName} -> RegisteredName;
-        _ -> atom_to_list(Validator)  % If not registered, assume it's already a name
-    end,
-    io:format("Validator Name : ~n ~s~n", [ValidatorName]),
-    case re:run(ValidatorName, "Validators_(\\d+)", [{capture, [1]}]) of
-        {match, [IndexStr]} ->
-            io:format("Matched Index: ~s~n", [IndexStr]),
-            list_to_integer(IndexStr);
-        nomatch ->
-            io:format("No match~n"),
-            0  % Return 0 or another default value if the pattern doesn't match
-    end.
 
 
 % Function to get the total number of validators
