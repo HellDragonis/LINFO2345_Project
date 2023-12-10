@@ -51,6 +51,7 @@ receive_block_data(BlockData) ->
     Line = io_lib:format("~w,~w,~s,~w,~s~n", [BlockNumber, MerkleRoot, NodeAddress, LastBlockHash, TransactionIDsStr]),
     file:write(File, Line),
     file:close(File).
+
 clear_csv_file() ->
     FileName = "blocks_data.csv",
     {ok, File} = file:open(FileName, [write]),

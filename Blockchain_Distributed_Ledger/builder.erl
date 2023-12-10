@@ -24,7 +24,7 @@ start(Address,  NumValidators, NumNonValidators) ->
     function_csv:clear_csv_file(),
     {ListValidators, ListNonValidators, _} = my_node:create_nodes(NumValidators, NumNonValidators),
     Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
-    register(AtomAddress, Pid),
+    register(AtomAddress, Pid).
     %UpdatedBuilders = my_node:update_builder_pid(Pid, ListBuilders),
     %my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders).
     %Pid.
@@ -38,9 +38,9 @@ builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidat
     AllTransactions = read_transactions("transactions.csv"),
     
     case lists:subtract(AllTransactions, ProcessedTransactions) of
-        %[] ->
+        [] ->
             % No new transactions, stop the loop
-            % io:format("No new transactions. Stopping the loop.~n");
+            io:format("No new transactions. Stopping the loop.~n");
         ValidTransactions ->
             %io:format("Start loop ~n"),
             %Take the first 10 transactions
@@ -102,7 +102,7 @@ broadcast_block(ListValidators, ListNonValidators, NewBlock) ->
     ReceiverPids = ListValidators ++ ListNonValidators,
     lists:foreach(
         fun(NodePid) ->
-            %io:format("Process ~p has sent the following message to ~p~n", [self(),NodePid]),
+            %io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {NewBlock},NodePid]),
             my_node:sends_messages(self(), NodePid, {NewBlock})
         end,
         ReceiverPids
