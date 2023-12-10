@@ -3,7 +3,8 @@
 
 % Initialization function, called at the bootstrapping
 init(ValidatorList, BuilderNode) ->
-    file:delete("election_log.txt"),
+    clear_log_files(ValidatorList),
+    clear_log_file(BuilderNode),
     % Store the initial list of validators and current proposer group head
     Top10Percent = select_top_10_percent(ValidatorList),
     State = #{validators => ValidatorList, proposer_group_head => Top10Percent, builder => BuilderNode},
@@ -24,9 +25,10 @@ start_election(State) ->
     % Broadcast the beginning of the election to stop block creation
     broadcast_begin_election(FirstNode, BuilderNode),
     NewState = select_proposers(State),
-    %NewProposerGroup = maps:get(proposer_group_head, NewState),
-    broadcast_new_proposers(ProposerGroupHead, State),
-    broadcast_new_epoch(BuilderNode).
+    NewProposerGroup = maps:get(proposer_group_head, NewState),
+    broadcast_new_proposers(ProposerGroupHead, NewState),
+    broadcast_new_epoch(BuilderNode),
+    NewState.
 
 
 receive_shuffled_list(ShuffledList) ->
@@ -49,8 +51,9 @@ send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) -
             Current_val = lists:nth(CurrentValidatorIndex, ProposerGroupHead),
             NextValidatorPid = lists:nth(NextIndex, ProposerGroupHead),
             %io:format("Sending shuffled list for ~p to ~p~n", [Current_val, NextValidatorPid]),
-            my_node:sends_messages(Current_val, NextValidatorPid, {shuffled_list, ShuffledList}),
-            log_operation("Sent shuffled list to", NextValidatorPid);
+            log_operation("Sent shuffled list to", NextValidatorPid),
+            my_node:sends_messages(Current_val, NextValidatorPid, {shuffled_list, ShuffledList});
+            
         _ ->
             io:format("Proposer group head is not a list. Unable to send the shuffled list.~n")
     end.
@@ -74,6 +77,7 @@ select_proposers(State) ->
 % Function to simulate broadcasting the beginning of an election
 broadcast_begin_election(ProposerGroupHead, BuilderNode) ->
     BuilderNode ! {begin_election, ProposerGroupHead, BuilderNode},
+    log_operation("Broadcasted begin_election from proposer group head", ProposerGroupHead),
     log_operation("Broadcasted begin_election to", BuilderNode).
 
 % Function to broadcast the new proposer group to all nodes
@@ -82,7 +86,8 @@ broadcast_new_proposers(NewProposerGroup, State) ->
     lists:foreach(
         fun(NodePid) ->
             %io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {NewProposerGroup},NodePid]),
-            my_node:sends_messages(self(), NodePid, {new_proposer, NewProposerGroup})
+            my_node:sends_messages(self(), NodePid, {new_proposer, NewProposerGroup}),
+            log_operation("Sent new proposer group to:", NodePid)
         end,
         ValidatorList
     ).
@@ -131,14 +136,52 @@ number_of_validators(State) ->
     NumberOfValidator = length(ValidatorList),
     NumberOfValidator.
 
-% Function to log the state to the "election_log.txt" file
+% Function to log the state to a file for each validator
 log_state(State) ->
-    {ok, File} = file:open("election_log.txt", [append]),
-    io:format(File, "~p.~n", [State]),
-    file:close(File).
+    ValidatorList = maps:get(validators, State),
+    lists:foreach(
+        fun(Validator) ->
+            ValidatorName = case erlang:process_info(Validator, registered_name) of
+                {registered_name, RegisteredName} -> atom_to_list(RegisteredName);
+                _ -> atom_to_list(Validator)  % If not registered, assume it's already a name
+            end,
+            {ok, File} = file:open("election_log_" ++ ValidatorName ++ ".txt", [append]),
+            io:format(File, "~p.~n", [State]),
+            file:close(File)
+        end,
+        ValidatorList).
 
-% Function to log an operation to the "election_log.txt" file
+% Function to log an operation to a file for each validator
 log_operation(Operation, Pid) ->
-    {ok, File} = file:open("election_log.txt", [append]),
+    ValidatorName = case erlang:process_info(Pid, registered_name) of
+        {registered_name, RegisteredName} -> atom_to_list(RegisteredName);
+        _ -> atom_to_list(Pid)  % If not registered, assume it's already a name
+    end,
+    {ok, File} = file:open("election_log_" ++ ValidatorName ++ ".txt", [append]),
     io:format(File, "~s ~p.~n", [Operation, Pid]),
     file:close(File).
+
+
+% Function to clear log files for each validator
+clear_log_files(ValidatorList) ->
+    lists:foreach(
+        fun(Validator) ->
+            ValidatorName = case erlang:process_info(Validator, registered_name) of
+                {registered_name, RegisteredName} -> atom_to_list(RegisteredName);
+                _ -> atom_to_list(Validator)  % If not registered, assume it's already a name
+            end,
+            LogFileName = "election_log_" ++ ValidatorName ++ ".txt",
+            file:delete(LogFileName),
+            io:format("Cleared log file: ~s~n", [LogFileName])
+        end,
+        ValidatorList).
+
+% Function to clear log files for each validator
+clear_log_file(BuilderNode) ->
+    BuilderName = case erlang:process_info(BuilderNode, registered_name) of
+        {registered_name, RegisteredName} -> atom_to_list(RegisteredName);
+        _ -> atom_to_list(BuilderNode)  % If not registered, assume it's already a name
+    end,
+    LogFileName = "election_log_" ++ BuilderName ++ ".txt",
+    file:delete(LogFileName),
+    io:format("Cleared log file: ~s~n", [LogFileName]).
