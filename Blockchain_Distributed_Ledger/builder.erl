@@ -25,8 +25,8 @@ start(Address,  NumValidators, NumNonValidators) ->
     {ListValidators, ListNonValidators, _} = my_node:create_nodes(NumValidators, NumNonValidators),
     Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
     register(AtomAddress, Pid),
-    UpdatedBuilders = my_node:update_builder_pid(Pid, ListBuilders),
-    my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders).
+    %UpdatedBuilders = my_node:update_builder_pid(Pid, ListBuilders),
+    %my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders).
     %Pid.
 
 % Builder main loop
@@ -38,18 +38,18 @@ builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidat
     AllTransactions = read_transactions("transactions.csv"),
     
     case lists:subtract(AllTransactions, ProcessedTransactions) of
-        [] ->
-             No new transactions, stop the loop
-             io:format("No new transactions. Stopping the loop.~n");
+        %[] ->
+            % No new transactions, stop the loop
+            % io:format("No new transactions. Stopping the loop.~n");
         ValidTransactions ->
-            io:format("Start loop ~n"),
+            %io:format("Start loop ~n"),
             %Take the first 10 transactions
             TransactionsForBlock = take_first_n(ValidTransactions, 10),
-            io:format("~p~n", [TransactionsForBlock]),
+            %io:format("~p~n", [TransactionsForBlock]),
             NewBlock = create_block(Address, TransactionsForBlock, Block,ListValidators,ListNonValidators),
             % Update the list of processed transactions
             NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
-            io:format("End loop ~n"),
+            %io:format("End loop ~n"),
             % Continue the loop with the updated processed transactions
             builder_loop(Address, NewBlock, NewProcessedTransactions,ListValidators,ListNonValidators)
     end.
@@ -102,7 +102,7 @@ broadcast_block(ListValidators, ListNonValidators, NewBlock) ->
     ReceiverPids = ListValidators ++ ListNonValidators,
     lists:foreach(
         fun(NodePid) ->
-            io:format("Process ~p has sent the following message to ~p~n", [self(),NodePid]),
+            %io:format("Process ~p has sent the following message to ~p~n", [self(),NodePid]),
             my_node:sends_messages(self(), NodePid, {NewBlock})
         end,
         ReceiverPids
