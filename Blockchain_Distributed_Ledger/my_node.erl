@@ -14,14 +14,14 @@ node_loop(Address) ->
         % Handling incoming messages
         {From, {shuffled_list, ShuffledList, CurrentValidatorIndex, ProposerGroupHead}} ->
             election_protocol:receive_shuffled_list(From, ShuffledList, CurrentValidatorIndex, ProposerGroupHead),
-            io:format("Going in the shuffle loop ~n"),
+            %io:format("Going in the shuffle loop ~n"),
             node_loop(Address);
 
-        {Current_val, last_val, {ShuffledList}} -> 
-            io:format("Going in the right loop ~n"),
+        {From, {last_val, ShuffledList}} -> 
+            %io:format("Going in the right loop ~n"),
             node_loop(Address);
         {From, {new_proposer, NewProposerGroup}} ->
-            io:format("Going in the proposer loop ~n"),
+            %io:format("Going in the proposer loop ~n"),
             node_loop(Address);
         {From, {is_valid, Transaction}} when is_list(Transaction) ->
             % Validate the transaction
@@ -39,7 +39,7 @@ node_loop(Address) ->
                     node_loop(Address)
             end;
         {From, Message} ->
-            io:format("Going in the default loop ~n"),
+            %io:format("Going in the default loop ~n"),
             handle_message(Address, From, Message),
             node_loop(Address);
         % Stop signal

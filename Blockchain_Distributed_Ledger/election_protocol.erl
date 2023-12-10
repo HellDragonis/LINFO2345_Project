@@ -75,12 +75,12 @@ send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) -
             io:format("Proposer group head is not a list. Unable to send the shuffled list.~n")
     end.
 
-send_back(ShuffledList, ProposerGroupHead, last_index) ->
+send_back(ShuffledList, ProposerGroupHead, Last_index) ->
     CurrentValidatorIndex =1,
     Current_val = lists:nth(CurrentValidatorIndex, ProposerGroupHead),
-    Last_val = lists:nth(last_index, ProposerGroupHead),
+    Last_val = lists:nth(Last_index, ProposerGroupHead),
     io:format("Just before send in send back~n"),
-    my_node:sends_messages(Current_val, last_val, {ShuffledList}).
+    my_node:sends_messages(Current_val, Last_val, {last_val, ShuffledList}).
 
 % Function to select the proposers and update the state
 select_proposers(State) ->
@@ -88,6 +88,7 @@ select_proposers(State) ->
     ProposerGroupHead = maps:get(proposer_group_head, State),
     ShuffleList = shuffle_list(AllValidators),
     ShuffledList = reshuffle_and_send(1, ShuffleList, ProposerGroupHead),
+    io:format("Final Shuffled List ~n ~p~n", [ShuffledList]),
     ProposerGroup = select_top_10_percent(ShuffledList),
     NewState = State#{proposer_group_head => ProposerGroup},
     % Log the election details to the file

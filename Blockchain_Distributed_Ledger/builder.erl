@@ -77,14 +77,14 @@ create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValida
             io:format("No new transactions. Stopping the loop.~n"),
         create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValidators, ListNonValidators, 0);
         ValidTransactions ->
-            %io:format("Start loop ~n"),
+            io:format("Start loop ~n"),
             % Take the first 10 transactions
             TransactionsForBlock = utility_builder:take_first_n(ValidTransactions, 10),
-            %io:format("~p~n", [TransactionsForBlock]),
+            io:format("~p~n", [TransactionsForBlock]),
             NewBlock = create_block(Address, TransactionsForBlock, Block, ListValidators, ListNonValidators),
             % Update the list of processed transactions
             NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
-            %io:format("End loop ~n"),
+            io:format("End loop ~n"),
             % Continue the loop with the updated processed transactions
             create_blocks(Address, NewBlock, AllTransactions, NewProcessedTransactions, ListValidators, ListNonValidators, NumBlocks - 1)
     end.
@@ -97,16 +97,16 @@ create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
     BlockNumber =  Block#block.block_number + 1,
     io:format("Block Number : ~n ~p~n", [BlockNumber]),
     MerkleRoot = utility_builder:root_hash(Transactions),
-    %io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
+    io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
     LastBlockHash = case BlockNumber of
         1 -> 0;
         _ -> crypto:hash(sha256, term_to_binary(Block))
         
     end,
-    %case LastBlockHash of 
-    %    0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
-    %    _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
-    %end, 
+    case LastBlockHash of 
+        0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
+        _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
+    end, 
     TransactionIDs = case BlockNumber of
         1 -> lists:seq(2, 11);
         _ when length(Transactions) > 1 -> lists:seq((BlockNumber - 1) * 10 + 2, (BlockNumber - 1)  * 10 + length(Transactions) + 1);
