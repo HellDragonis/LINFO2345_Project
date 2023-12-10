@@ -173,9 +173,9 @@ log_state(State) ->
                 _ -> atom_to_list(Validator)  % If not registered, assume it's already a name
             end,
             LogFileName = "logs/election_log_" ++ ValidatorName ++ ".txt",
-            {ok, File} = file:open(LogFileName, [append]),
-            %io:format(File, "~p.~n", [State]),
-            file:close(File)
+            LogData = io_lib:format("~p.~n", [State]),
+            file:write_file(LogFileName, LogData, [append]),
+            ok
         end,
         ValidatorList).
 
@@ -186,9 +186,9 @@ log_operation(Operation, Pid) ->
         _ -> atom_to_list(Pid)  % If not registered, assume it's already a name
     end,
     LogFileName = "logs/election_log_" ++ ValidatorName ++ ".txt",
-    {ok, File} = file:open(LogFileName, [append]),
-    %io:format(File, "~s ~p.~n", [Operation, Pid]),
-    file:close(File).
+    LogData = io_lib:format("~s ~p.~n", [Operation, Pid]),
+    file:write_file(LogFileName, LogData, [append]),
+    ok.
 
 
 % Function to clear log files for each validator
