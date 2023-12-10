@@ -1,5 +1,5 @@
 -module(election_protocol).
--export([init/2, start_election/1, select_proposers/1, broadcast_new_proposers/2, send_to_next_validator/3, receive_shuffled_list/4, send_back/3]).
+-export([init/2, start_election/2, select_proposers/2, broadcast_new_proposers/2, send_to_next_validator/4, receive_shuffled_list/5, send_back/4]).
 
 % Initialization function, called at the bootstrapping
 init(ValidatorList, BuilderNode) ->
@@ -11,10 +11,12 @@ init(ValidatorList, BuilderNode) ->
 
     % Save the initial state to a file for logging purposes
     log_state(State),
-    State.
+    ParentId = self(),
+    NewState = start_election(State, ParentId),
+    {NewState, ParentId}.
 
 % Function to initiate a new election
-start_election(State) ->
+start_election(State, ParentId) ->
     % Get the first node in the lists of Proposer Group
     ProposerGroupHead = maps:get(proposer_group_head, State),
     FirstNode = hd(ProposerGroupHead),
@@ -24,32 +26,32 @@ start_election(State) ->
 
     % Broadcast the beginning of the election to stop block creation
     broadcast_begin_election(FirstNode, BuilderNode),
-    NewState = select_proposers(State),
+    NewState = select_proposers(State, ParentId),
     NewProposerGroup = maps:get(proposer_group_head, NewState),
     broadcast_new_proposers(ProposerGroupHead, NewState),
     broadcast_new_epoch(BuilderNode),
     NewState.
 
 
-receive_shuffled_list(From, ShuffledList, CurrentValidatorIndex, ProposerGroupHead) ->
+receive_shuffled_list(From, ShuffledList, CurrentValidatorIndex, ProposerGroupHead, ParentId) ->
     %io:format("Received shuffled list: ~p~n", [ShuffledList]),
     %io:format("Current index of validators: ~p~n", [CurrentValidatorIndex]),
     %io:format("Current proposer: ~p~n", [ProposerGroupHead]).
-    reshuffle_and_send(CurrentValidatorIndex+1, ShuffledList, ProposerGroupHead).
+    reshuffle_and_send(CurrentValidatorIndex+1, ShuffledList, ProposerGroupHead, ParentId).
 
 % Function to reshuffle the list and send it to the next validator
-reshuffle_and_send(CurrentValidator_index, List, ProposerGroupHead) ->
+reshuffle_and_send(CurrentValidator_index, List, ProposerGroupHead, ParentId) ->
     ShuffledList = shuffle_list(List),
     Last_val = length(ProposerGroupHead),
     NextIndex = length(ProposerGroupHead) + 1,
     case CurrentValidator_index of
         NextIndex ->
             io:format("Going to send_back ~p ~n", [List]),
-            send_back(List, ProposerGroupHead, Last_val),
+            send_back(List, ProposerGroupHead, Last_val, ParentId),
             ShuffledList; % Return ShuffledList when NextIndex matches
         _ ->
             io:format("New shuffled list is: ~p, sending it to ~p ~n", [ShuffledList, CurrentValidator_index]),
-            send_to_next_validator(ShuffledList, CurrentValidator_index, ProposerGroupHead),
+            send_to_next_validator(ShuffledList, CurrentValidator_index, ProposerGroupHead, ParentId),
             ShuffledList % Return ShuffledList when NextIndex doesn't match
     end.
 
@@ -59,7 +61,7 @@ reshuffle_and_send(CurrentValidator_index, List, ProposerGroupHead) ->
 
 
 % Function to simulate sending the shuffled list to the next validator
-send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) ->
+send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead, ParentId) ->
     case ProposerGroupHead of
         [] ->
             io:format("Proposer group head is empty. Unable to send the shuffled list.~n");
@@ -69,25 +71,26 @@ send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) -
             NextValidatorPid = lists:nth(NextIndex, ProposerGroupHead),
             %io:format("Sending shuffled list for ~p to ~p~n", [Current_val, NextValidatorPid]),
             log_operation("Send shuffled list from", Current_val),
-            my_node:sends_messages(Current_val, NextValidatorPid, {shuffled_list, ShuffledList, CurrentValidatorIndex, ProposerGroupHead});
+            my_node:sends_messages(Current_val, NextValidatorPid, {shuffled_list, ShuffledList, CurrentValidatorIndex, ProposerGroupHead, ParentId});
             
         _ ->
             io:format("Proposer group head is not a list. Unable to send the shuffled list.~n")
     end.
 
-send_back(ShuffledList, ProposerGroupHead, Last_index) ->
+send_back(ShuffledList, ProposerGroupHead, Last_index, ParentId) ->
     CurrentValidatorIndex =1,
     Current_val = lists:nth(CurrentValidatorIndex, ProposerGroupHead),
     Last_val = lists:nth(Last_index, ProposerGroupHead),
-    io:format("Just before send in send back~n"),
-    my_node:sends_messages(Current_val, Last_val, {last_val, ShuffledList}).
+    io:format("Just before send in send back~n ~p~n ~p~n ~p~n", [Current_val, Last_val, self()]),
+    my_node:sends_messages(Current_val, Last_val, {last_val, ShuffledList, ParentId}).
 
 % Function to select the proposers and update the state
-select_proposers(State) ->
+select_proposers(State, ParentId) ->
     AllValidators = maps:get(validators, State),
     ProposerGroupHead = maps:get(proposer_group_head, State),
     ShuffleList = shuffle_list(AllValidators),
-    ShuffledList = reshuffle_and_send(1, ShuffleList, ProposerGroupHead),
+    TempShuffledList = reshuffle_and_send(1, ShuffleList, ProposerGroupHead, ParentId),
+    ShuffledList = wait_for_shuffled_results(),
     io:format("Final Shuffled List ~n ~p~n", [ShuffledList]),
     ProposerGroup = select_top_10_percent(ShuffledList),
     NewState = State#{proposer_group_head => ProposerGroup},
@@ -211,3 +214,16 @@ clear_log_file(BuilderNode) ->
     LogFileName = "logs/election_log_" ++ BuilderName ++ ".txt",
     file:delete(LogFileName).
     %io:format("Cleared log file: ~s~n", [LogFileName]).
+
+
+
+wait_for_shuffled_results() ->
+    io:format("Wait"),
+    receive
+        % Message indicating validation result from a validator
+        {From, {shuffled_result, ShuffledList}} ->
+            ShuffledList;
+        % Other messages can be handled here
+        _ ->
+            wait_for_shuffled_results()
+    end.

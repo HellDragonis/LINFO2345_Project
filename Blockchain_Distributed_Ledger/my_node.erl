@@ -12,13 +12,16 @@ start(Address) ->
 node_loop(Address) ->
     receive
         % Handling incoming messages
-        {From, {shuffled_list, ShuffledList, CurrentValidatorIndex, ProposerGroupHead}} ->
-            election_protocol:receive_shuffled_list(From, ShuffledList, CurrentValidatorIndex, ProposerGroupHead),
+        {From, {shuffled_list, ShuffledList, CurrentValidatorIndex, ProposerGroupHead, ParentId}} ->
+            election_protocol:receive_shuffled_list(From, ShuffledList, CurrentValidatorIndex, ProposerGroupHead, ParentId),
             %io:format("Going in the shuffle loop ~n"),
             node_loop(Address);
 
-        {From, {last_val, ShuffledList}} -> 
-            %io:format("Going in the right loop ~n"),
+        {From, {last_val, ShuffledList, ParentId}} -> 
+            io:format("Going in the right loop ~n"),
+            NodePid = whereis(Address),
+            io:format("Adrress is ~p and NodePid is ~p and From is ~p~n", [Address, NodePid, From]),
+            sends_messages(NodePid, ParentId, {shuffled_result, ShuffledList}),
             node_loop(Address);
         {From, {new_proposer, NewProposerGroup}} ->
             %io:format("Going in the proposer loop ~n"),
