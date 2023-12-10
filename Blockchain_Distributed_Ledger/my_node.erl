@@ -1,5 +1,5 @@
 -module(my_node).
--export([start/1, sends_messages/3, create_nodes/2, display_lists/3, add_builder/2, update_builder_pid/2]).
+-export([start/1, sends_messages/3,create_nodes/2, display_lists/3, add_builder/2, update_builder_pid/2]).
 
 % Function to start a new node with a given address and register it
 start(Address) ->
@@ -12,37 +12,7 @@ start(Address) ->
 node_loop(Address) ->
     receive
         % Handling incoming messages
-        {From, {shuffled_list, ShuffledList, CurrentValidatorIndex, ProposerGroupHead, ParentId}} ->
-            election_protocol:receive_shuffled_list(From, ShuffledList, CurrentValidatorIndex, ProposerGroupHead, ParentId),
-            %io:format("Going in the shuffle loop ~n"),
-            node_loop(Address);
-
-        {From, {last_val, ShuffledList, ParentId}} -> 
-            io:format("Going in the right loop ~n"),
-            NodePid = whereis(Address),
-            io:format("Adrress is ~p and NodePid is ~p and From is ~p~n", [Address, NodePid, From]),
-            sends_messages(NodePid, ParentId, {shuffled_result, ShuffledList}),
-            node_loop(Address);
-        {From, {new_proposer, NewProposerGroup}} ->
-            %io:format("Going in the proposer loop ~n"),
-            node_loop(Address);
-        {From, {is_valid, Transaction}} when is_list(Transaction) ->
-            % Validate the transaction
-            NodePid = whereis(Address),
-            case is_transaction_valid(Transaction) of
-                true ->
-                    % Transaction is valid, process it
-                    sends_messages(Address, From, {validation_result, NodePid, 1}),
-                    %io:format("Valid transaction received: ~p~n", [Transaction]),
-                    node_loop(Address);
-                false ->
-                    % Transaction is not valid, ignore or take appropriate action
-                    sends_messages(Address, From, {validation_result, NodePid, 0}),
-                    %io:format("Invalid transaction received: ~p~n", [Transaction])
-                    node_loop(Address)
-            end;
         {From, Message} ->
-            %io:format("Going in the default loop ~n"),
             handle_message(Address, From, Message),
             node_loop(Address);
         % Stop signal
@@ -58,19 +28,15 @@ handle_message(Address, From, Message) ->
     FromName = case erlang:process_info(From, registered_name) of
         {registered_name, RegisteredName} -> RegisteredName;
         _ -> atom_to_list(From)  % If not registered, assume it's already a name
-    end.
-    % Implement the transaction asked here, and send an acknowledgement (TODO)
-    %io:format("Node ~p received message from ~s: ~w~n", [Address, FromName, Message]).
-
-
-% Function to check if a transaction is valid
-is_transaction_valid(Transaction) ->
-    lists:all(fun(Element) -> Element /= "" end, Transaction).
+    end,
+    {Address, Message, FromName}.
 
 
 % Function to send a message to another node
 sends_messages(From, To, Message) ->
     To ! {From, Message}.
+
+
 
 create_nodes(NumValidators, NumNonValidators) ->
     {ListValidators, ListBuilders} = create_validators(NumValidators, []),
@@ -101,3 +67,4 @@ display_lists(ListValidators, ListNonValidators, ListBuilders) ->
     io:format("Validators nodes: ~p~n", [ListValidators]),
     io:format("Non-validators nodes: ~p~n", [ListNonValidators]),
     io:format("Builder nodes: ~p~n", [ListBuilders]).
+

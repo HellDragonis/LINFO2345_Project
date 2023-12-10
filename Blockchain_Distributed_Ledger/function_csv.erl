@@ -27,7 +27,6 @@ print_csv_data([Row | Rows]) ->
     io:format("~p~n", [Row]),
     print_csv_data(Rows).
 
-
 % Function to write block information to a CSV file
 write_blocks_to_csv(BlockDataList) ->
     FileName = "blocks_data.csv",
@@ -57,4 +56,3 @@ clear_csv_file() ->
     {ok, File} = file:open(FileName, [write]),
     file:write(File, ""),  % Writing an empty string to the file clears its content
     file:close(File).
-

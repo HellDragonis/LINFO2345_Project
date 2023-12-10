@@ -22,97 +22,65 @@ start(Address,  NumValidators, NumNonValidators) ->
     },
     AtomAddress = list_to_atom(Address),
     function_csv:clear_csv_file(),
-    {ListValidators, ListNonValidators, ListBuilders} = my_node:create_nodes(NumValidators, NumNonValidators),
+    {ListValidators, ListNonValidators, _} = my_node:create_nodes(NumValidators, NumNonValidators),
     Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
-    register(AtomAddress, Pid),
-    UpdatedBuilders = my_node:update_builder_pid(Pid, ListBuilders),
-    my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders),
-    {ListValidators, ListNonValidators, Pid}.
+    register(AtomAddress, Pid).
+    %UpdatedBuilders = my_node:update_builder_pid(Pid, ListBuilders),
+    %my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders).
     %Pid.
 
 % Builder main loop
 builder_loop(Address, Block, ListValidators,ListNonValidators) ->
     builder_loop(Address, Block, [], ListValidators,ListNonValidators).
 
-builder_loop(Address, Block, ProcessedTransactions, ListValidators, ListNonValidators) ->
+builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidators) ->
     % Read all transactions from the CSV file
-    AllTransactions = utility_builder:read_transactions("transactions.csv"),
-    receive
-        % Message indicating the beginning of an election
-        {begin_election, ProposerGroupHead, BuilderNode} ->
-            io:format("Received begin_election message. Stopping block creation.~n"),
-            % Wait for a resume message before creating blocks again
-            wait_for_resume(Address, Block, ProcessedTransactions, ListValidators, ListNonValidators);
-
-        % Message indicating block creation
-        create_block ->
-            NumBlocks = 10,
-            {NewBlock, NewProcessedTransactions} = create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValidators, ListNonValidators, NumBlocks),
-            builder_loop(Address, NewBlock, NewProcessedTransactions,ListValidators,ListNonValidators);
-
-        % Other messages (if any) can be handled here
-        _ ->
-            builder_loop(Address, Block, [], ListValidators, ListNonValidators)
-    end.
-
-% Function to wait for a resume message before creating blocks again
-wait_for_resume(Address, Block, ProcessedTransactions, ListValidators, ListNonValidators) ->
-    receive
-        % Message indicating the resumption of block creation
-        resume_block_creation ->
-            io:format("Resuming block creation.~n"),
-            % Continue the loop with an empty list of processed transactions
-            builder_loop(Address, Block, ProcessedTransactions, ListValidators, ListNonValidators);
-        % Other messages (if any) can be handled here
-        _ ->
-            wait_for_resume(Address, Block, ProcessedTransactions, ListValidators, ListNonValidators)
-    end.
-
-create_blocks(_, NewBlock, _, NewProcessedTransactions, _, _, 0) ->
-    {NewBlock, NewProcessedTransactions};
-create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValidators, ListNonValidators, NumBlocks) ->
+    AllTransactions = read_transactions("transactions.csv"),
+    
     case lists:subtract(AllTransactions, ProcessedTransactions) of
-        [] ->
+        %[] ->
             % No new transactions, stop the loop
-            io:format("No new transactions. Stopping the loop.~n"),
-        create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValidators, ListNonValidators, 0);
+            %io:format("No new transactions. Stopping the loop.~n");
         ValidTransactions ->
-            io:format("Start loop ~n"),
+            %io:format("Start loop ~n"),
             % Take the first 10 transactions
-            TransactionsForBlock = utility_builder:take_first_n(ValidTransactions, 10),
-            io:format("~p~n", [TransactionsForBlock]),
-            NewBlock = create_block(Address, TransactionsForBlock, Block, ListValidators, ListNonValidators),
+            TransactionsForBlock = take_first_n(ValidTransactions, 10),
+            %io:format("~p~n", [TransactionsForBlock]),
+            NewBlock = create_block(Address, TransactionsForBlock, Block,ListValidators,ListNonValidators),
             % Update the list of processed transactions
             NewProcessedTransactions = ProcessedTransactions ++ TransactionsForBlock,
-            io:format("End loop ~n"),
+            %io:format("End loop ~n"),
             % Continue the loop with the updated processed transactions
-            create_blocks(Address, NewBlock, AllTransactions, NewProcessedTransactions, ListValidators, ListNonValidators, NumBlocks - 1)
+            builder_loop(Address, NewBlock, NewProcessedTransactions,ListValidators,ListNonValidators)
     end.
+
+read_transactions(FilePath) ->
+    Data = function_csv:read_csv_file(FilePath),
+    Data.
 
 
 % Function to create a new block and broadcast it
 create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
-    broadcast_transaction(ListValidators, Transactions),
-    wait_for_validation_results(ListValidators, 0, 0),
     BlockNumber =  Block#block.block_number + 1,
-    io:format("Block Number : ~n ~p~n", [BlockNumber]),
     MerkleRoot = utility_builder:root_hash(Transactions),
-    io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
+    %io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
     LastBlockHash = case BlockNumber of
         1 -> 0;
         _ -> crypto:hash(sha256, term_to_binary(Block))
         
     end,
-    case LastBlockHash of 
-        0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
-        _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
-    end, 
-    TransactionIDs = case BlockNumber of
-        1 -> lists:seq(2, 11);
-        _ when length(Transactions) > 1 -> lists:seq((BlockNumber - 1) * 10 + 2, (BlockNumber - 1)  * 10 + length(Transactions) + 1);
-        _ when length(Transactions) == 1 -> [(BlockNumber - 1) * 10 + 2]
+    %case LastBlockHash of 
+    %    0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
+    %    _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
+    %end, 
+    %io:format("Length of Transactions : ~n ~w~n", [length(Transactions)]),
+    TransactionIDs = case {BlockNumber, length(Transactions)} of
+    {1, _} -> lists:seq(2, 11);
+    {BlockNum, Length} when Length > 1 -> lists:seq((BlockNum - 1) * 10 + 2, (BlockNum - 1)  * 10 + Length + 1);
+    {BlockNum, 1} -> [(BlockNum - 1) * 10 + 2];
+    _ -> []  % Handle other cases or provide a default value
     end,
-    io:format("Transaction Ids : ~n ~w~n", [TransactionIDs]),
+    %io:format("Transaction Ids : ~n ~w~n", [TransactionIDs]),
     NewBlock = #block{
         block_number = BlockNumber,
         merkle_tree_root = MerkleRoot,
@@ -120,10 +88,12 @@ create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
         last_block_hash = LastBlockHash,
         transactions = Transactions
     },
+    
     BlockData = {BlockNumber, MerkleRoot, Address, LastBlockHash, TransactionIDs},
     function_csv:receive_block_data(BlockData), 
     broadcast_block(ListValidators, ListNonValidators,NewBlock ),
     NewBlock.
+
 
 
 % Function to broadcast a block to all nodes
@@ -131,34 +101,21 @@ broadcast_block(ListValidators, ListNonValidators, NewBlock) ->
     ReceiverPids = ListValidators ++ ListNonValidators,
     lists:foreach(
         fun(NodePid) ->
-            %io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {NewBlock},NodePid]),
+            %io:format("Process ~p has sent the following message to ~p~n", [self(),NodePid]),
             my_node:sends_messages(self(), NodePid, {NewBlock})
         end,
         ReceiverPids
     ).
 
-% Function to broadcast a block to all nodes
-broadcast_transaction(ListValidators, Transaction) ->
-    lists:foreach(
-        fun(NodePid) ->
-            %io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {Transaction},NodePid]),
-            my_node:sends_messages(self(), NodePid, {is_valid, Transaction})
-        end,
-        ListValidators
-    ).
 
 
-wait_for_validation_results([], ValidCount, InvalidCount) when ValidCount > InvalidCount ->
-    io:format("Majority of transaction valid ~n"),
-    ok;
+% Helper functions
+take_first_n(List, N) when N > 0 ->
+    take_first_n(List, N, []).
 
-
-wait_for_validation_results(ListValidators, ValidCount, InvalidCount) ->
-    receive
-        % Message indicating validation result from a validator
-        {From, {validation_result, ValidatorPid, IsValid}} ->
-            wait_for_validation_results(ListValidators -- [ValidatorPid], ValidCount + IsValid, InvalidCount);
-        % Other messages can be handled here
-        _ ->
-            wait_for_validation_results(ListValidators, ValidCount, InvalidCount)
-    end.
+take_first_n(_, 0, Acc) ->
+    lists:reverse(Acc);
+take_first_n([], N, Acc) when N > 0 ->
+    lists:reverse(Acc);  % Return whatever has been collected so far
+take_first_n([H | T], N, Acc) ->
+    take_first_n(T, N - 1, [H | Acc]).
