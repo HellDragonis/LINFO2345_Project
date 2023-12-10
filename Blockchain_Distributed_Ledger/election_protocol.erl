@@ -51,7 +51,7 @@ send_to_next_validator(ShuffledList, CurrentValidatorIndex, ProposerGroupHead) -
             Current_val = lists:nth(CurrentValidatorIndex, ProposerGroupHead),
             NextValidatorPid = lists:nth(NextIndex, ProposerGroupHead),
             %io:format("Sending shuffled list for ~p to ~p~n", [Current_val, NextValidatorPid]),
-            log_operation("Sent shuffled list to", NextValidatorPid),
+            log_operation("Send shuffled list from", Current_val),
             my_node:sends_messages(Current_val, NextValidatorPid, {shuffled_list, ShuffledList});
             
         _ ->
@@ -173,8 +173,8 @@ clear_log_files(ValidatorList) ->
                 _ -> atom_to_list(Validator)  % If not registered, assume it's already a name
             end,
             LogFileName = "logs/election_log_" ++ ValidatorName ++ ".txt",
-            file:delete(LogFileName),
-            io:format("Cleared log file: ~s~n", [LogFileName])
+            file:delete(LogFileName)
+            %io:format("Cleared log file: ~s~n", [LogFileName])
         end,
         ValidatorList).
 
@@ -185,5 +185,5 @@ clear_log_file(BuilderNode) ->
         _ -> atom_to_list(BuilderNode)  % If not registered, assume it's already a name
     end,
     LogFileName = "logs/election_log_" ++ BuilderName ++ ".txt",
-    file:delete(LogFileName),
-    io:format("Cleared log file: ~s~n", [LogFileName]).
+    file:delete(LogFileName).
+    %io:format("Cleared log file: ~s~n", [LogFileName]).
