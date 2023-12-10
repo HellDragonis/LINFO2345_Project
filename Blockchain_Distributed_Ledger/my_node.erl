@@ -17,6 +17,21 @@ node_loop(Address) ->
             node_loop(Address);
         {From, {new_proposer, NewProposerGroup}} ->
             node_loop(Address);
+        {From, {is_valid, Transaction}} when is_list(Transaction) ->
+            % Validate the transaction
+            NodePid = whereis(Address),
+            case is_transaction_valid(Transaction) of
+                true ->
+                    % Transaction is valid, process it
+                    sends_messages(Address, From, {validation_result, NodePid, 1}),
+                    %io:format("Valid transaction received: ~p~n", [Transaction]),
+                    node_loop(Address);
+                false ->
+                    % Transaction is not valid, ignore or take appropriate action
+                    sends_messages(Address, From, {validation_result, NodePid, 0}),
+                    %io:format("Invalid transaction received: ~p~n", [Transaction])
+                    node_loop(Address)
+            end;
         {From, Message} ->
             handle_message(Address, From, Message),
             node_loop(Address);
@@ -36,6 +51,11 @@ handle_message(Address, From, Message) ->
     end.
     % Implement the transaction asked here, and send an acknowledgement (TODO)
     %io:format("Node ~p received message from ~s: ~w~n", [Address, FromName, Message]).
+
+
+% Function to check if a transaction is valid
+is_transaction_valid(Transaction) ->
+    lists:all(fun(Element) -> Element /= "" end, Transaction).
 
 
 % Function to send a message to another node
