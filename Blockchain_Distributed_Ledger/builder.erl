@@ -21,12 +21,12 @@ start(Address,  NumValidators, NumNonValidators) ->
         transactions = []
     },
     AtomAddress = list_to_atom(Address),
-    writer_csv:clear_csv_file(),
-    {ListValidators, ListNonValidators, ListBuilders} = create_node:create_nodes(NumValidators, NumNonValidators),
+    function_csv:clear_csv_file(),
+    {ListValidators, ListNonValidators, _} = my_node:create_nodes(NumValidators, NumNonValidators),
     Pid = spawn(fun() -> builder_loop(Address, Block, ListValidators,ListNonValidators) end),
     register(AtomAddress, Pid).
-    %UpdatedBuilders = create_node:update_builder_pid(Pid, ListBuilders),
-    %create_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders),
+    %UpdatedBuilders = my_node:update_builder_pid(Pid, ListBuilders),
+    %my_node:display_lists(ListValidators, ListNonValidators, UpdatedBuilders).
     %Pid.
 
 % Builder main loop
@@ -38,9 +38,9 @@ builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidat
     AllTransactions = read_transactions("transactions.csv"),
     
     case lists:subtract(AllTransactions, ProcessedTransactions) of
-        [] ->
+        %[] ->
             % No new transactions, stop the loop
-            io:format("No new transactions. Stopping the loop.~n");
+            %io:format("No new transactions. Stopping the loop.~n");
         ValidTransactions ->
             %io:format("Start loop ~n"),
             % Take the first 10 transactions
@@ -55,14 +55,14 @@ builder_loop(Address, Block, ProcessedTransactions,ListValidators,ListNonValidat
     end.
 
 read_transactions(FilePath) ->
-    Data = csv_reader:read_csv_file(FilePath),
+    Data = function_csv:read_csv_file(FilePath),
     Data.
 
 
 % Function to create a new block and broadcast it
 create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
     BlockNumber =  Block#block.block_number + 1,
-    MerkleRoot = merkle_tree:root_hash(Transactions),
+    MerkleRoot = utility_builder:root_hash(Transactions),
     %io:format("Merkle Tree : ~n ~s~n", [MerkleRoot]),
     LastBlockHash = case BlockNumber of
         1 -> 0;
@@ -70,14 +70,15 @@ create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
         
     end,
     %case LastBlockHash of 
-     %   0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
-      %  _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
+    %    0 -> io:format("Last Block Hash : ~n ~w~n", [LastBlockHash]);
+    %    _ -> io:format("Last Block Hash : ~n ~s~n", [LastBlockHash])
     %end, 
     %io:format("Length of Transactions : ~n ~w~n", [length(Transactions)]),
-    TransactionIDs = case BlockNumber of
-        1 -> lists:seq(2, 11);
-        _ when length(Transactions) > 1 -> lists:seq((BlockNumber - 1) * 10 + 2, (BlockNumber - 1)  * 10 + length(Transactions) + 1);
-        _ when length(Transactions) == 1 -> [(BlockNumber - 1) * 10 + 2]
+    TransactionIDs = case {BlockNumber, length(Transactions)} of
+    {1, _} -> lists:seq(2, 11);
+    {BlockNum, Length} when Length > 1 -> lists:seq((BlockNum - 1) * 10 + 2, (BlockNum - 1)  * 10 + Length + 1);
+    {BlockNum, 1} -> [(BlockNum - 1) * 10 + 2];
+    _ -> []  % Handle other cases or provide a default value
     end,
     %io:format("Transaction Ids : ~n ~w~n", [TransactionIDs]),
     NewBlock = #block{
@@ -89,7 +90,7 @@ create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
     },
     
     BlockData = {BlockNumber, MerkleRoot, Address, LastBlockHash, TransactionIDs},
-    writer_csv:receive_block_data(BlockData), 
+    function_csv:receive_block_data(BlockData), 
     broadcast_block(ListValidators, ListNonValidators,NewBlock ),
     NewBlock.
 
@@ -100,7 +101,7 @@ broadcast_block(ListValidators, ListNonValidators, NewBlock) ->
     ReceiverPids = ListValidators ++ ListNonValidators,
     lists:foreach(
         fun(NodePid) ->
-            %io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {NewBlock},NodePid]),
+            %io:format("Process ~p has sent the following message to ~p~n", [self(),NodePid]),
             my_node:sends_messages(self(), NodePid, {NewBlock})
         end,
         ReceiverPids
