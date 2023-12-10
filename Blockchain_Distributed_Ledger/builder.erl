@@ -92,8 +92,6 @@ create_blocks(Address, Block, AllTransactions, ProcessedTransactions, ListValida
 
 % Function to create a new block and broadcast it
 create_block(Address, Transactions, Block, ListValidators, ListNonValidators) ->
-    broadcast_transaction(ListValidators, Transactions),
-    wait_for_validation_results(ListValidators, 0, 0),
     BlockNumber =  Block#block.block_number + 1,
     io:format("Block Number : ~n ~p~n", [BlockNumber]),
     MerkleRoot = utility_builder:root_hash(Transactions),
@@ -136,29 +134,3 @@ broadcast_block(ListValidators, ListNonValidators, NewBlock) ->
         end,
         ReceiverPids
     ).
-
-% Function to broadcast a block to all nodes
-broadcast_transaction(ListValidators, Transaction) ->
-    lists:foreach(
-        fun(NodePid) ->
-            %io:format("Process ~p has sent the following message  ~p to ~p~n", [self(), {Transaction},NodePid]),
-            my_node:sends_messages(self(), NodePid, {is_valid, Transaction})
-        end,
-        ListValidators
-    ).
-
-
-wait_for_validation_results([], ValidCount, InvalidCount) when ValidCount > InvalidCount ->
-    io:format("Majority of transaction valid ~n"),
-    ok;
-
-
-wait_for_validation_results(ListValidators, ValidCount, InvalidCount) ->
-    receive
-        % Message indicating validation result from a validator
-        {From, {validation_result, ValidatorPid, IsValid}} ->
-            wait_for_validation_results(ListValidators -- [ValidatorPid], ValidCount + IsValid, InvalidCount);
-        % Other messages can be handled here
-        _ ->
-            wait_for_validation_results(ListValidators, ValidCount, InvalidCount)
-    end.
