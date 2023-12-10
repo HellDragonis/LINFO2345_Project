@@ -145,7 +145,8 @@ log_state(State) ->
                 {registered_name, RegisteredName} -> atom_to_list(RegisteredName);
                 _ -> atom_to_list(Validator)  % If not registered, assume it's already a name
             end,
-            {ok, File} = file:open("election_log_" ++ ValidatorName ++ ".txt", [append]),
+            LogFileName = "logs/election_log_" ++ ValidatorName ++ ".txt",
+            {ok, File} = file:open(LogFileName, [append]),
             io:format(File, "~p.~n", [State]),
             file:close(File)
         end,
@@ -157,7 +158,8 @@ log_operation(Operation, Pid) ->
         {registered_name, RegisteredName} -> atom_to_list(RegisteredName);
         _ -> atom_to_list(Pid)  % If not registered, assume it's already a name
     end,
-    {ok, File} = file:open("election_log_" ++ ValidatorName ++ ".txt", [append]),
+    LogFileName = "logs/election_log_" ++ ValidatorName ++ ".txt",
+    {ok, File} = file:open(LogFileName, [append]),
     io:format(File, "~s ~p.~n", [Operation, Pid]),
     file:close(File).
 
@@ -170,7 +172,7 @@ clear_log_files(ValidatorList) ->
                 {registered_name, RegisteredName} -> atom_to_list(RegisteredName);
                 _ -> atom_to_list(Validator)  % If not registered, assume it's already a name
             end,
-            LogFileName = "election_log_" ++ ValidatorName ++ ".txt",
+            LogFileName = "logs/election_log_" ++ ValidatorName ++ ".txt",
             file:delete(LogFileName),
             io:format("Cleared log file: ~s~n", [LogFileName])
         end,
@@ -182,6 +184,6 @@ clear_log_file(BuilderNode) ->
         {registered_name, RegisteredName} -> atom_to_list(RegisteredName);
         _ -> atom_to_list(BuilderNode)  % If not registered, assume it's already a name
     end,
-    LogFileName = "election_log_" ++ BuilderName ++ ".txt",
+    LogFileName = "logs/election_log_" ++ BuilderName ++ ".txt",
     file:delete(LogFileName),
     io:format("Cleared log file: ~s~n", [LogFileName]).
